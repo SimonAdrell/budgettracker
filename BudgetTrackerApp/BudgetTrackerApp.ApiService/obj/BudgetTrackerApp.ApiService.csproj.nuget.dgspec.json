@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj": {}
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj": {}
   },
   "projects": {
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj": {
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj",
+        "projectUniqueName": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj",
         "projectName": "BudgetTrackerApp.ApiService",
-        "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj",
+        "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\BudgetTrackerApp.ApiService.csproj",
         "packagesPath": "C:\\Users\\simon\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\obj\\",
+        "outputPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ApiService\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\simon\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -26,8 +26,8 @@
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
-                "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj"
+              "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
+                "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj"
               }
             }
           }
@@ -490,14 +490,14 @@
         }
       }
     },
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
+        "projectUniqueName": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
         "projectName": "BudgetTrackerApp.ServiceDefaults",
-        "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
+        "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
         "packagesPath": "C:\\Users\\simon\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\obj\\",
+        "outputPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\simon\\AppData\\Roaming\\NuGet\\NuGet.Config"

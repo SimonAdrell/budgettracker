@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "sR5W43I6fN0=",
+  "dgSpecHash": "keFkFHnzxw0=",
   "success": true,
-  "projectFilePath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj",
+  "projectFilePath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\simon\\.nuget\\packages\\aspire.dashboard.sdk.win-arm64\\13.1.0\\aspire.dashboard.sdk.win-arm64.13.1.0.nupkg.sha512",
     "C:\\Users\\simon\\.nuget\\packages\\aspire.hosting\\13.1.0\\aspire.hosting.13.1.0.nupkg.sha512",

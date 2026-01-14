@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "OYRWNqXXFBQ=",
+  "dgSpecHash": "GZ0PGnTo95U=",
   "success": true,
-  "projectFilePath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
+  "projectFilePath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\simon\\.nuget\\packages\\microsoft.extensions.ambientmetadata.application\\10.1.0\\microsoft.extensions.ambientmetadata.application.10.1.0.nupkg.sha512",
     "C:\\Users\\simon\\.nuget\\packages\\microsoft.extensions.compliance.abstractions\\10.1.0\\microsoft.extensions.compliance.abstractions.10.1.0.nupkg.sha512",

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj": {}
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj": {}
   },
   "projects": {
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
+        "projectUniqueName": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
         "projectName": "BudgetTrackerApp.ServiceDefaults",
-        "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
+        "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj",
         "packagesPath": "C:\\Users\\simon\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\obj\\",
+        "outputPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\simon\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -510,14 +510,14 @@
         }
       }
     },
-    "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj": {
+    "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj",
+        "projectUniqueName": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj",
         "projectName": "BudgetTrackerApp.Web",
-        "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj",
+        "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\BudgetTrackerApp.Web.csproj",
         "packagesPath": "C:\\Users\\simon\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\obj\\",
+        "outputPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Web\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\simon\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -532,8 +532,8 @@
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
-                "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj"
+              "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj": {
+                "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.ServiceDefaults\\BudgetTrackerApp.ServiceDefaults.csproj"
               }
             }
           }

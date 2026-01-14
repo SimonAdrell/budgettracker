@@ -5498,11 +5498,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\BudgetTrackerApp.Tests.csproj",
+      "projectUniqueName": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\BudgetTrackerApp.Tests.csproj",
       "projectName": "BudgetTrackerApp.Tests",
-      "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\BudgetTrackerApp.Tests.csproj",
+      "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\BudgetTrackerApp.Tests.csproj",
       "packagesPath": "C:\\Users\\simon\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\obj\\",
+      "outputPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.Tests\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\simon\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -5517,8 +5517,8 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj": {
-              "projectPath": "C:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj"
+            "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj": {
+              "projectPath": "c:\\Users\\simon\\source\\repos\\budgettracker\\BudgetTrackerApp\\BudgetTrackerApp.AppHost\\BudgetTrackerApp.AppHost.csproj"
             }
           }
         }
