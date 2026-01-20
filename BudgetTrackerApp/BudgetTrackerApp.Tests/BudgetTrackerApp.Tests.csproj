@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BudgetTrackerApp.AppHost\BudgetTrackerApp.AppHost.csproj" />
+    <ProjectReference Include="..\BudgetTrackerApp.ApiService\BudgetTrackerApp.ApiService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
