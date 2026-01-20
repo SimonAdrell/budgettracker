@@ -107,7 +107,7 @@ Category (1) ────< Category (M) [self-reference for hierarchy]
 
 ## Design Highlights
 
-✓ **Excel Import Ready**: Transaction table maps directly to Swedish bank format  
+✓ **Excel Import Ready**: Transaction table maps directly to bank export format  
 ✓ **Multi-User Support**: Accounts can be shared via AccountUser  
 ✓ **Flexible Categorization**: Hierarchical categories with optional assignment  
 ✓ **Balance Tracking**: Dual approach (per-transaction + snapshots)  

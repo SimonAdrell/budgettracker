@@ -33,7 +33,7 @@ The budget tracker uses PostgreSQL with the following main entities:
 
 ## Excel Import Support
 
-The database is designed to import Swedish bank transaction exports with columns:
+The database is designed to import bank transaction exports with columns:
 - Bokföringsdatum (Booking date)
 - Transaktionsdatum (Transaction date)
 - Text (Description)

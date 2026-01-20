@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the Entity Relationship (ER) diagram for the Budget Tracker application database, designed to support Excel imports with Swedish bank transaction data.
+This document describes the Entity Relationship (ER) diagram for the Budget Tracker application database, designed to support Excel imports with bank transaction data.
 
 ## ER Diagram
 
@@ -169,7 +169,7 @@ erDiagram
 ## Design Considerations
 
 ### Excel Import Support
-The Transaction table is designed to directly map to the Swedish bank export format:
+The Transaction table is designed to directly map to the bank export format:
 - **Bokföringsdatum** → `BookingDate`
 - **Transaktionsdatum** → `TransactionDate`
 - **Text** → `Description`
