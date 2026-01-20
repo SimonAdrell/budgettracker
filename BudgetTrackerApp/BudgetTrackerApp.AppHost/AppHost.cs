@@ -15,7 +15,7 @@ var apiService = builder.AddProject<Projects.BudgetTrackerApp_ApiService>("apise
 var reactApp = builder.AddNpmApp("react-frontend", "../frontend")
     .WithHttpEndpoint(port: 5173, env: "PORT")
     .WithExternalHttpEndpoints()
-    .WithEnvironment("VITE_API_URL", apiService.GetEndpoint("http"))
+    .PublishAsDockerFile()
     .WaitFor(apiService);
 
 builder.AddProject<Projects.BudgetTrackerApp_Web>("webfrontend")
