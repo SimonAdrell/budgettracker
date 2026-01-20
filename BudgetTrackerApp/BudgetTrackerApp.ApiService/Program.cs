@@ -69,6 +69,10 @@ builder.Services.AddAuthorization();
 // Register TokenService
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+// Register Account and Import services
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IImportService, ImportService>();
+
 // Configure CORS for React SPA
 builder.Services.AddCors(options =>
 {
@@ -286,6 +290,104 @@ app.MapPost("/api/auth/logout", async (
     return Results.Ok(new { message = "Logged out successfully" });
 })
 .WithName("Logout")
+.RequireAuthorization();
+
+// Account endpoints
+app.MapGet("/api/accounts", async (
+    HttpContext httpContext,
+    IAccountService accountService) =>
+{
+    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (userId == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    var accounts = await accountService.GetUserAccountsAsync(userId);
+    return Results.Ok(accounts);
+})
+.WithName("GetAccounts")
+.RequireAuthorization();
+
+app.MapPost("/api/accounts", async (
+    CreateAccountRequest request,
+    HttpContext httpContext,
+    IAccountService accountService) =>
+{
+    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (userId == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { error = "Account name is required" });
+    }
+
+    var account = await accountService.CreateAccountAsync(request, userId);
+    return Results.Ok(account);
+})
+.WithName("CreateAccount")
+.RequireAuthorization();
+
+// Import endpoint
+app.MapPost("/api/import/upload", async (
+    HttpContext httpContext,
+    IImportService importService,
+    IAccountService accountService) =>
+{
+    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (userId == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    var form = await httpContext.Request.ReadFormAsync();
+    var file = form.Files["file"];
+    var accountIdStr = form["accountId"].ToString();
+
+    if (file == null || file.Length == 0)
+    {
+        return Results.BadRequest(new { error = "No file uploaded" });
+    }
+
+    if (!int.TryParse(accountIdStr, out var accountId))
+    {
+        return Results.BadRequest(new { error = "Invalid account ID" });
+    }
+
+    // Verify account access
+    if (!await accountService.UserHasAccessToAccountAsync(accountId, userId))
+    {
+        return Results.Forbid();
+    }
+
+    // Check file extension
+    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (extension != ".xls" && extension != ".xlsx")
+    {
+        return Results.BadRequest(new { error = "Only Excel files (.xls, .xlsx) are supported" });
+    }
+
+    try
+    {
+        using var stream = file.OpenReadStream();
+        var result = await importService.ImportTransactionsFromExcelAsync(stream, accountId, userId);
+        
+        if (!result.Success)
+        {
+            return Results.BadRequest(result);
+        }
+
+        return Results.Ok(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("ImportTransactions")
 .RequireAuthorization();
 
 app.MapDefaultEndpoints();
