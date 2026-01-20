@@ -332,7 +332,7 @@ export default LoginComponent;
 
 ## Database Migrations
 
-### Apply Migrations
+### Automatic Migration on Startup
 
 Migrations are automatically applied on application startup via:
 ```csharp
@@ -343,41 +343,320 @@ using (var scope = app.Services.CreateScope())
 }
 ```
 
+This means:
+- ✅ No manual migration needed for first run
+- ✅ Database schema always matches code
+- ✅ Safe for development and production
+
 ### Manual Migration Commands
 
-To create a new migration:
+#### Prerequisites
+
+1. **Install EF Core Tools** (one-time setup):
+   ```bash
+   dotnet tool install --global dotnet-ef
+   ```
+
+2. **Ensure Aspire is running** (for connection strings):
+   ```bash
+   # In a separate terminal
+   cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+   dotnet run
+   ```
+   Keep this running while executing EF commands.
+
+#### View Migration Status
+
+Check which migrations exist and which have been applied:
+
 ```bash
 cd BudgetTrackerApp/BudgetTrackerApp.ApiService
-dotnet ef migrations add MigrationName --output-dir Data/Migrations
+dotnet ef migrations list
 ```
 
-To apply migrations manually:
+Expected output:
+```
+Build started...
+Build succeeded.
+20260120114305_InitialIdentitySetup (Applied)
+```
+
+#### Apply Migrations Manually
+
+To apply all pending migrations:
+
 ```bash
+cd BudgetTrackerApp/BudgetTrackerApp.ApiService
 dotnet ef database update
 ```
 
-To remove the last migration:
+Expected output when migrations are already applied:
+```
+Build started...
+Build succeeded.
+No migrations were applied. The database is already up to date.
+Done.
+```
+
+Expected output when applying new migrations:
+```
+Build started...
+Build succeeded.
+Applying migration '20260120114305_InitialIdentitySetup'.
+Done.
+```
+
+#### Create a New Migration
+
+When you add or modify database models:
+
 ```bash
+cd BudgetTrackerApp/BudgetTrackerApp.ApiService
+dotnet ef migrations add YourMigrationName --output-dir Data/Migrations
+```
+
+Example:
+```bash
+dotnet ef migrations add AddUserProfileFields --output-dir Data/Migrations
+```
+
+This creates three files:
+- `YYYYMMDDHHMMSS_YourMigrationName.cs` - Migration operations
+- `YYYYMMDDHHMMSS_YourMigrationName.Designer.cs` - Model snapshot
+- `ApplicationDbContextModelSnapshot.cs` - Updated (full model)
+
+#### Apply a Specific Migration
+
+To migrate to a specific migration:
+
+```bash
+dotnet ef database update MigrationName
+```
+
+To migrate to the initial state (remove all migrations):
+```bash
+dotnet ef database update 0
+```
+
+#### Remove the Last Migration
+
+To undo the last migration (only if not applied to database):
+
+```bash
+cd BudgetTrackerApp/BudgetTrackerApp.ApiService
 dotnet ef migrations remove
 ```
+
+⚠️ **Warning**: This only works if the migration hasn't been applied to the database yet.
+
+#### Generate SQL Script
+
+To generate a SQL script instead of applying directly:
+
+```bash
+# Generate SQL for all migrations
+dotnet ef migrations script --output migrations.sql
+
+# Generate SQL for specific range
+dotnet ef migrations script FromMigration ToMigration --output migrations.sql
+
+# Generate SQL from a migration to latest
+dotnet ef migrations script InitialIdentitySetup --output migrations.sql
+```
+
+### Troubleshooting Migrations
+
+#### Error: "Build failed"
+**Problem**: Project doesn't compile.
+**Solution**: Fix compilation errors first, then retry.
+
+```bash
+cd BudgetTrackerApp/BudgetTrackerApp.ApiService
+dotnet build
+# Fix any errors, then retry migration command
+```
+
+#### Error: "Unable to create an object of type 'ApplicationDbContext'"
+**Problem**: Connection string not available or invalid.
+**Solution**: 
+1. Ensure AppHost is running (provides connection string via Aspire)
+2. Check `appsettings.json` for any connection string issues
+
+```bash
+# Terminal 1: Start Aspire
+cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+dotnet run
+
+# Terminal 2: Run migrations
+cd BudgetTrackerApp/BudgetTrackerApp.ApiService
+dotnet ef database update
+```
+
+#### Error: "A network-related or instance-specific error occurred"
+**Problem**: Cannot connect to PostgreSQL.
+**Solution**:
+1. Verify Docker Desktop is running
+2. Check PostgreSQL container is running in Aspire dashboard
+3. Verify connection string is correct
+
+```bash
+# Check Docker
+docker ps | grep postgres
+
+# If not running, start Aspire
+cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+dotnet run
+```
+
+#### Error: "The table 'AspNetUsers' already exists"
+**Problem**: Trying to apply migrations when database already has tables.
+**Solution**:
+1. Either drop the database and recreate:
+   ```bash
+   # Connect to postgres container via Aspire dashboard
+   # Or use pgAdmin to drop the database
+   ```
+2. Or mark migrations as applied:
+   ```bash
+   # Mark all migrations as applied without executing them
+   dotnet ef database update --no-build
+   ```
+
+#### Migration Applied but Changes Not Reflected
+**Problem**: Database not updating despite migration success.
+**Solution**:
+1. Verify migration contains expected operations:
+   ```bash
+   # Check the migration file content
+   cat Data/Migrations/*_YourMigration.cs
+   ```
+2. Check the database directly:
+   ```bash
+   # Use Aspire dashboard to connect to PostgreSQL
+   # Or use a database client like pgAdmin or DBeaver
+   ```
+3. Restart the API service to clear any cached data
+
+### Migration Best Practices
+
+1. **Always create migrations for model changes**: Don't modify the database manually
+2. **Test migrations**: Apply to a test database before production
+3. **Review migration code**: Check the generated migration file before applying
+4. **Use descriptive names**: `AddUserProfileFields` not `Update1`
+5. **One migration per feature**: Don't combine unrelated changes
+6. **Commit migrations with code**: Version control both together
+7. **Never modify applied migrations**: Create a new migration to fix issues
 
 ## Running the Application
 
 ### Using Aspire (Recommended)
 
+#### Step-by-Step Guide
+
+1. **Prerequisites Check**:
+   ```bash
+   # Verify .NET SDK
+   dotnet --version
+   # Should show: 10.0.x
+   
+   # Verify Docker is running
+   docker ps
+   # Should show running containers or empty list (not an error)
+   ```
+
+2. **Start the Application**:
+   ```bash
+   cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+   dotnet run
+   ```
+
+3. **Wait for Startup** (takes 10-30 seconds):
+   
+   You'll see console output like:
+   ```
+   info: Aspire.Hosting.DistributedApplication[0]
+         Aspire version: 13.1.0
+   info: Aspire.Hosting.DistributedApplication[0]
+         Now listening on: http://localhost:15252
+   info: Aspire.Hosting.DistributedApplication[0]
+         Login to the dashboard at http://localhost:15252/login?t=xxx
+   ```
+
+4. **What Happens Automatically**:
+   - ✅ PostgreSQL container starts with data volume (`postgres-data`)
+   - ✅ Database `identitydb` is created
+   - ✅ EF Core migrations execute (creates Identity tables)
+   - ✅ API service starts on assigned port
+   - ✅ Web frontend starts on assigned port
+   - ✅ Health checks verify all services are running
+
+5. **Access the Services**:
+   - **Aspire Dashboard**: Open the URL from console (e.g., `http://localhost:15252`)
+   - **API Service**: Check dashboard for the endpoint (e.g., `http://localhost:5001`)
+   - **Web Frontend**: Check dashboard for the endpoint (e.g., `http://localhost:5002`)
+
+6. **Test the API**:
+   ```bash
+   # Replace <port> with the actual port from the dashboard
+   curl http://localhost:<port>/
+   
+   # Expected response:
+   # "API service is running. Navigate to /weatherforecast to see sample data."
+   ```
+
+### Alternative: Running Services Individually
+
+If you need to run services separately for debugging:
+
+1. **Start PostgreSQL via Aspire** (required for connection strings):
+   ```bash
+   cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+   dotnet run
+   ```
+
+2. **In another terminal, run API service**:
+   ```bash
+   cd BudgetTrackerApp/BudgetTrackerApp.ApiService
+   dotnet run
+   ```
+
+3. **In another terminal, run Web frontend** (optional):
+   ```bash
+   cd BudgetTrackerApp/BudgetTrackerApp.Web
+   dotnet run
+   ```
+
+### Direct API Access
+
+The API service will be available at a port assigned by Aspire (check the dashboard).
+
+Example API calls:
 ```bash
-cd BudgetTrackerApp/BudgetTrackerApp.AppHost
-dotnet run
+# Get API port from Aspire dashboard, then:
+export API_URL=http://localhost:5001
+
+# Test endpoint
+curl $API_URL/
+
+# Register a user
+curl -X POST $API_URL/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "Test123!",
+    "confirmPassword": "Test123!",
+    "firstName": "Test",
+    "lastName": "User"
+  }'
+
+# Login
+curl -X POST $API_URL/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "Test123!"
+  }'
 ```
-
-This will:
-1. Start PostgreSQL container with data volume
-2. Create the identitydb database
-3. Start the API service
-4. Start the web frontend
-5. Apply database migrations automatically
-
-Access the Aspire dashboard at the URL shown in the console output.
 
 ### Direct API Access
 
