@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
+using System.Net;
 using BudgetTrackerApp.ApiService.DTOs;
 using Microsoft.Extensions.Logging;
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import accountService from '../services/accountService';
@@ -15,6 +15,7 @@ function Import() {
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountNumber, setNewAccountNumber] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadAccounts();
@@ -129,7 +130,9 @@ function Import() {
         
         // Reset file input
         setFile(null);
-        document.querySelector('input[type="file"]').value = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       } else {
         setMessage({
           type: 'error',
@@ -259,6 +262,7 @@ function Import() {
             accept=".xls,.xlsx"
             onChange={handleFileChange}
             disabled={loading}
+            ref={fileInputRef}
           />
           {file && (
             <div className="file-info">

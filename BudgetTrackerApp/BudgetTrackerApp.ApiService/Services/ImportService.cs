@@ -102,12 +102,12 @@ public class ImportService : IImportService
         using (var package = new ExcelPackage(fileStream))
         {
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-            if (worksheet == null)
+            if (worksheet == null || worksheet.Dimension == null)
             {
-                throw new InvalidOperationException("Excel file contains no worksheets");
+                throw new InvalidOperationException("Excel file contains no worksheets or data");
             }
 
-            var rowCount = worksheet.Dimension?.Rows ?? 0;
+            var rowCount = worksheet.Dimension.Rows;
             
             // Find header row (typically row 1)
             var headerRow = 1;
@@ -118,7 +118,7 @@ public class ImportService : IImportService
             var balanceCol = -1;
 
             // Detect column headers (Swedish bank export format)
-            for (int col = 1; col <= worksheet.Dimension?.Columns; col++)
+            for (int col = 1; col <= (worksheet.Dimension?.Columns ?? 0); col++)
             {
                 var header = worksheet.Cells[headerRow, col].Text.Trim().ToLowerInvariant();
                 
