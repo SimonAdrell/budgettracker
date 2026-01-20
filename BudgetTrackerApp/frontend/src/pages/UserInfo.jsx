@@ -41,9 +41,18 @@ function UserInfo() {
             <span className="value">{user.email}</span>
           </div>
         </div>
-        <button onClick={handleLogout} className="logout-button">
-          Logout
-        </button>
+        <div style={{ marginTop: '20px' }}>
+          <button 
+            onClick={() => navigate('/import')} 
+            className="logout-button"
+            style={{ backgroundColor: '#007bff', marginRight: '10px' }}
+          >
+            Import Transactions
+          </button>
+          <button onClick={handleLogout} className="logout-button">
+            Logout
+          </button>
+        </div>
       </div>
     </div>
   );
