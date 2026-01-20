@@ -11,6 +11,14 @@ BudgetTracker is an Aspire-based application with ASP.NET Core Identity integrat
 - **JWT-based authentication** compatible with React SPAs
 - **Refresh token** support for secure token rotation
 - **CORS configuration** for frontend integration
+- **Budget tracking** with Excel import support for Swedish bank transactions
+
+## Documentation
+
+- [Database ER Diagram](docs/database/ER_DIAGRAM.md) - Complete database schema design
+- [Schema Overview](docs/database/SCHEMA_OVERVIEW.md) - Quick reference guide
+- [Identity Setup](IDENTITY_SETUP.md) - Authentication and authorization details
+- [API Reference](API_REFERENCE.md) - API endpoint documentation
 
 ## Getting Started
 
