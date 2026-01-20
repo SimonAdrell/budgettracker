@@ -17,4 +17,9 @@ builder.AddProject<Projects.BudgetTrackerApp_Web>("webfrontend")
     .WithReference(apiService)
     .WaitFor(apiService);
 
+builder.AddViteApp("react-frontend", "../frontend")
+    .WithReference(apiService)
+    .WaitFor(apiService)
+    .WithNpm();
+
 builder.Build().Run();

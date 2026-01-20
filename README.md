@@ -115,8 +115,34 @@ For detailed information about the Identity integration, authentication endpoint
 - **BudgetTrackerApp.AppHost** - Aspire orchestration
 - **BudgetTrackerApp.ApiService** - Backend API with Identity
 - **BudgetTrackerApp.Web** - Blazor frontend
+- **BudgetTrackerApp.frontend** - React SPA frontend with authentication ([See React README](BudgetTrackerApp/frontend/REACT_README.md))
 - **BudgetTrackerApp.ServiceDefaults** - Shared Aspire configuration
 - **BudgetTrackerApp.Tests** - Integration tests
+
+## Running the React Frontend
+
+A React-based frontend with authentication is available in the `BudgetTrackerApp/frontend` directory.
+
+### Quick Start
+
+1. **Start Aspire** (Terminal 1):
+   ```bash
+   cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+   dotnet run
+   ```
+
+2. **Note the API port** from the Aspire dashboard output
+
+3. **Start React Frontend** (Terminal 2):
+   ```bash
+   cd BudgetTrackerApp/frontend
+   npm install  # First time only
+   npm run dev
+   ```
+
+4. **Access the React app** at `http://localhost:5173`
+
+For detailed information about the React frontend, see the [React Frontend README](BudgetTrackerApp/frontend/REACT_README.md).
 
 ## Database
 
