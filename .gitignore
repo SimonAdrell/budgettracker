@@ -305,6 +305,10 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# Vite build output
+**/dist/
+**/dist-ssr/
+
 # Visual Studio 6 build log
 *.plg
 
