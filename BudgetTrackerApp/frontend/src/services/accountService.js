@@ -1,12 +1,10 @@
 import axios from 'axios';
 import authService from './authService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 const accountService = {
   getAccounts: async () => {
     const token = authService.getToken();
-    const response = await axios.get(`${API_URL}/api/accounts`, {
+    const response = await axios.get(`/api/api/accounts`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
@@ -14,9 +12,9 @@ const accountService = {
 
   createAccount: async (name, accountNumber) => {
     const token = authService.getToken();
-    const response = await axios.post(`${API_URL}/api/accounts`, 
+    const response = await axios.post(`/api/api/accounts`,
       { name, accountNumber },
-      { headers: { Authorization: `Bearer ${token}` }}
+      { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;
   },
