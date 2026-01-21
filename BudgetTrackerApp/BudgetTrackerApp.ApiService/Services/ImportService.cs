@@ -2,7 +2,8 @@ using BudgetTrackerApp.ApiService.Data;
 using BudgetTrackerApp.ApiService.DTOs;
 using BudgetTrackerApp.ApiService.Models;
 using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
+using ExcelDataReader;
+using System.Text;
 
 namespace BudgetTrackerApp.ApiService.Services;
 
@@ -16,8 +17,8 @@ public class ImportService : IImportService
         _context = context;
         _accountService = accountService;
         
-        // Set EPPlus license context
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        // Register code pages for ExcelDataReader
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
     public async Task<ImportResponse> ImportTransactionsFromExcelAsync(Stream fileStream, int accountId, string userId)
@@ -99,18 +100,20 @@ public class ImportService : IImportService
     {
         var transactions = new List<TransactionImportDto>();
 
-        using (var package = new ExcelPackage(fileStream))
+        using (var reader = ExcelReaderFactory.CreateReader(fileStream))
         {
-            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-            if (worksheet == null || worksheet.Dimension == null)
+            if (reader == null)
             {
-                throw new InvalidOperationException("Excel file contains no worksheets or data");
+                throw new InvalidOperationException("Unable to read Excel file");
             }
 
-            var rowCount = worksheet.Dimension.Rows;
-            
-            // Find header row (typically row 1)
-            var headerRow = 1;
+            // Read first worksheet
+            if (!reader.Read())
+            {
+                throw new InvalidOperationException("Excel file contains no data");
+            }
+
+            // Find header row (typically first row)
             var bookingDateCol = -1;
             var transactionDateCol = -1;
             var descriptionCol = -1;
@@ -118,9 +121,9 @@ public class ImportService : IImportService
             var balanceCol = -1;
 
             // Detect column headers (Swedish bank export format)
-            for (int col = 1; col <= (worksheet.Dimension?.Columns ?? 0); col++)
+            for (int col = 0; col < reader.FieldCount; col++)
             {
-                var header = worksheet.Cells[headerRow, col].Text.Trim().ToLowerInvariant();
+                var header = reader.GetValue(col)?.ToString()?.Trim().ToLowerInvariant() ?? "";
                 
                 if (header.Contains("bokföringsdatum") || header.Contains("booking date"))
                     bookingDateCol = col;
@@ -141,55 +144,91 @@ public class ImportService : IImportService
             }
 
             // Parse data rows
-            for (int row = headerRow + 1; row <= rowCount; row++)
+            int rowNumber = 1;
+            while (reader.Read())
             {
+                rowNumber++;
                 try
                 {
-                    var bookingDateText = worksheet.Cells[row, bookingDateCol].Text.Trim();
-                    var transactionDateText = worksheet.Cells[row, transactionDateCol].Text.Trim();
-                    var description = worksheet.Cells[row, descriptionCol].Text.Trim();
-                    var amountText = worksheet.Cells[row, amountCol].Text.Trim();
-                    var balanceText = worksheet.Cells[row, balanceCol].Text.Trim();
+                    var bookingDateValue = reader.GetValue(bookingDateCol);
+                    var transactionDateValue = reader.GetValue(transactionDateCol);
+                    var description = reader.GetValue(descriptionCol)?.ToString()?.Trim() ?? "";
+                    var amountValue = reader.GetValue(amountCol);
+                    var balanceValue = reader.GetValue(balanceCol);
 
                     // Skip empty rows
-                    if (string.IsNullOrWhiteSpace(bookingDateText) && string.IsNullOrWhiteSpace(description))
+                    if (bookingDateValue == null && string.IsNullOrWhiteSpace(description))
                         continue;
 
-                    // Parse dates
-                    if (!DateOnly.TryParse(bookingDateText, out var bookingDate))
+                    // Parse booking date
+                    DateOnly bookingDate;
+                    if (bookingDateValue is DateTime bookingDateTime)
                     {
-                        // Try to get date value directly from Excel
-                        var dateValue = worksheet.Cells[row, bookingDateCol].GetValue<DateTime?>();
-                        if (dateValue.HasValue)
-                            bookingDate = DateOnly.FromDateTime(dateValue.Value);
-                        else
-                            throw new InvalidOperationException($"Invalid booking date at row {row}");
+                        bookingDate = DateOnly.FromDateTime(bookingDateTime);
+                    }
+                    else
+                    {
+                        var bookingDateText = bookingDateValue?.ToString()?.Trim() ?? "";
+                        if (!DateOnly.TryParse(bookingDateText, out bookingDate))
+                        {
+                            throw new InvalidOperationException($"Invalid booking date at row {rowNumber}");
+                        }
                     }
 
-                    if (!DateOnly.TryParse(transactionDateText, out var transactionDate))
+                    // Parse transaction date
+                    DateOnly transactionDate;
+                    if (transactionDateValue is DateTime transactionDateTime)
                     {
-                        var dateValue = worksheet.Cells[row, transactionDateCol].GetValue<DateTime?>();
-                        if (dateValue.HasValue)
-                            transactionDate = DateOnly.FromDateTime(dateValue.Value);
-                        else
+                        transactionDate = DateOnly.FromDateTime(transactionDateTime);
+                    }
+                    else
+                    {
+                        var transactionDateText = transactionDateValue?.ToString()?.Trim() ?? "";
+                        if (!DateOnly.TryParse(transactionDateText, out transactionDate))
+                        {
                             transactionDate = bookingDate; // Default to booking date
+                        }
                     }
 
-                    // Parse amount (handle Swedish number format with comma as decimal separator)
-                    var amountCleaned = amountText.Replace(" ", "").Replace(",", ".");
-                    if (!decimal.TryParse(amountCleaned, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount))
+                    // Parse amount
+                    decimal amount = 0;
+                    if (amountValue is double amountDouble)
                     {
-                        // Try to get numeric value directly
-                        var numValue = worksheet.Cells[row, amountCol].GetValue<decimal?>();
-                        amount = numValue ?? 0;
+                        amount = (decimal)amountDouble;
+                    }
+                    else if (amountValue is decimal amountDecimal)
+                    {
+                        amount = amountDecimal;
+                    }
+                    else
+                    {
+                        var amountText = amountValue?.ToString()?.Trim() ?? "0";
+                        // Handle Swedish number format with comma as decimal separator
+                        var amountCleaned = amountText.Replace(" ", "").Replace(",", ".");
+                        if (!decimal.TryParse(amountCleaned, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount))
+                        {
+                            amount = 0;
+                        }
                     }
 
                     // Parse balance
-                    var balanceCleaned = balanceText.Replace(" ", "").Replace(",", ".");
-                    if (!decimal.TryParse(balanceCleaned, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var balance))
+                    decimal balance = 0;
+                    if (balanceValue is double balanceDouble)
                     {
-                        var numValue = worksheet.Cells[row, balanceCol].GetValue<decimal?>();
-                        balance = numValue ?? 0;
+                        balance = (decimal)balanceDouble;
+                    }
+                    else if (balanceValue is decimal balanceDecimal)
+                    {
+                        balance = balanceDecimal;
+                    }
+                    else
+                    {
+                        var balanceText = balanceValue?.ToString()?.Trim() ?? "0";
+                        var balanceCleaned = balanceText.Replace(" ", "").Replace(",", ".");
+                        if (!decimal.TryParse(balanceCleaned, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out balance))
+                        {
+                            balance = 0;
+                        }
                     }
 
                     var transaction = new TransactionImportDto
@@ -199,14 +238,14 @@ public class ImportService : IImportService
                         Description = description,
                         Amount = amount,
                         Balance = balance,
-                        OriginalText = $"{bookingDateText}|{transactionDateText}|{description}|{amountText}|{balanceText}"
+                        OriginalText = $"{bookingDateValue}|{transactionDateValue}|{description}|{amountValue}|{balanceValue}"
                     };
 
                     transactions.Add(transaction);
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Error parsing row {row}: {ex.Message}");
+                    throw new InvalidOperationException($"Error parsing row {rowNumber}: {ex.Message}");
                 }
             }
         }
