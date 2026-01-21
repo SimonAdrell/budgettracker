@@ -102,13 +102,19 @@ public class ImportService : IImportService
 
         using (var reader = ExcelReaderFactory.CreateReader(fileStream))
         {
-            // Read first worksheet - first row should be header
+            // Skip first row (contains a date we don't need)
             if (!reader.Read())
             {
                 throw new InvalidOperationException("Excel file contains no data");
             }
 
-            // Find header row (typically first row)
+            // Read second row which contains the column headers
+            if (!reader.Read())
+            {
+                throw new InvalidOperationException("Excel file is missing header row");
+            }
+
+            // Find header row (second row)
             var bookingDateCol = -1;
             var transactionDateCol = -1;
             var descriptionCol = -1;
@@ -138,8 +144,8 @@ public class ImportService : IImportService
                 throw new InvalidOperationException("Excel file is missing required columns. Expected: Bokföringsdatum, Transaktionsdatum, Text, Insättning/Uttag, Behållning");
             }
 
-            // Parse data rows
-            int rowNumber = 1; // Header is row 1, data starts at row 2
+            // Parse data rows (starting from row 3)
+            int rowNumber = 2; // Row 1 is date, row 2 is header, data starts at row 3
             while (reader.Read())
             {
                 rowNumber++;
