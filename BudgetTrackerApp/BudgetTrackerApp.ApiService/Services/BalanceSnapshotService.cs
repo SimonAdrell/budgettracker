@@ -42,6 +42,7 @@ public class BalanceSnapshotService : IBalanceSnapshotService
 
         int snapshotsProcessed = 0;
         decimal? lastKnownBalance = null;
+        var snapshotsToUpsert = new List<(DateOnly date, decimal balance)>();
 
         // Process each day in the range
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
@@ -59,10 +60,13 @@ public class BalanceSnapshotService : IBalanceSnapshotService
             // Only create snapshot if we have a balance to record
             if (lastKnownBalance.HasValue)
             {
-                await UpsertSnapshotAsync(accountId, date, lastKnownBalance.Value);
+                snapshotsToUpsert.Add((date, lastKnownBalance.Value));
                 snapshotsProcessed++;
             }
         }
+
+        // Batch upsert all snapshots
+        await BatchUpsertSnapshotsAsync(accountId, snapshotsToUpsert);
 
         _logger.LogInformation("Generated {Count} balance snapshots for account {AccountId}", 
             snapshotsProcessed, accountId);
@@ -146,5 +150,61 @@ public class BalanceSnapshotService : IBalanceSnapshotService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Batch upserts multiple balance snapshots efficiently.
+    /// Fetches all existing snapshots in the date range, then creates or updates them as needed.
+    /// </summary>
+    private async Task BatchUpsertSnapshotsAsync(int accountId, List<(DateOnly date, decimal balance)> snapshots)
+    {
+        if (!snapshots.Any())
+        {
+            return;
+        }
+
+        var startDate = snapshots.Min(s => s.date);
+        var endDate = snapshots.Max(s => s.date);
+
+        // Fetch all existing snapshots in the date range
+        var existingSnapshots = await _context.BalanceSnapshots
+            .Where(bs => bs.AccountId == accountId && bs.SnapshotDate >= startDate && bs.SnapshotDate <= endDate)
+            .ToDictionaryAsync(bs => bs.SnapshotDate, bs => bs);
+
+        int updatedCount = 0;
+        int createdCount = 0;
+
+        foreach (var (date, balance) in snapshots)
+        {
+            if (existingSnapshots.TryGetValue(date, out var existingSnapshot))
+            {
+                // Update existing snapshot if balance changed
+                if (existingSnapshot.Balance != balance)
+                {
+                    existingSnapshot.Balance = balance;
+                    existingSnapshot.CreatedAt = DateTime.UtcNow;
+                    updatedCount++;
+                }
+            }
+            else
+            {
+                // Create new snapshot
+                var snapshot = new BalanceSnapshot
+                {
+                    AccountId = accountId,
+                    SnapshotDate = date,
+                    Balance = balance,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.BalanceSnapshots.Add(snapshot);
+                createdCount++;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogDebug("Batch upserted snapshots for account {AccountId}: {CreatedCount} created, {UpdatedCount} updated", 
+            accountId, createdCount, updatedCount);
     }
 }

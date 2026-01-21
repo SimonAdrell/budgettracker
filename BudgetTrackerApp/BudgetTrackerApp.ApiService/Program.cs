@@ -383,6 +383,9 @@ app.MapPost("/api/import/upload", async (
         }
 
         // Generate balance snapshots after successful import
+        // Note: We regenerate all snapshots to ensure correctness, as new transactions
+        // may affect the balance history. For large accounts, consider implementing
+        // a more targeted approach that only regenerates affected date ranges.
         if (result.ImportedCount > 0)
         {
             await snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId);
