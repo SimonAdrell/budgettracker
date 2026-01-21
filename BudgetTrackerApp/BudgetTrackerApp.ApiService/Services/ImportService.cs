@@ -102,12 +102,7 @@ public class ImportService : IImportService
 
         using (var reader = ExcelReaderFactory.CreateReader(fileStream))
         {
-            if (reader == null)
-            {
-                throw new InvalidOperationException("Unable to read Excel file");
-            }
-
-            // Read first worksheet
+            // Read first worksheet - first row should be header
             if (!reader.Read())
             {
                 throw new InvalidOperationException("Excel file contains no data");
@@ -144,7 +139,7 @@ public class ImportService : IImportService
             }
 
             // Parse data rows
-            int rowNumber = 1;
+            int rowNumber = 1; // Header is row 1, data starts at row 2
             while (reader.Read())
             {
                 rowNumber++;
