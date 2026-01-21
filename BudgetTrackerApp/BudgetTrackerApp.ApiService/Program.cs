@@ -72,6 +72,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // Register Account and Import services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IImportService, ImportService>();
+builder.Services.AddScoped<IBalanceSnapshotService, BalanceSnapshotService>();
 
 // Configure CORS for React SPA
 builder.Services.AddCors(options =>
@@ -335,7 +336,8 @@ app.MapPost("/api/accounts", async (
 app.MapPost("/api/import/upload", async (
     HttpContext httpContext,
     IImportService importService,
-    IAccountService accountService) =>
+    IAccountService accountService,
+    IBalanceSnapshotService snapshotService) =>
 {
     var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     if (userId == null)
@@ -380,6 +382,15 @@ app.MapPost("/api/import/upload", async (
             return Results.BadRequest(result);
         }
 
+        // Generate balance snapshots after successful import
+        // Note: We regenerate all snapshots to ensure correctness, as new transactions
+        // may affect the balance history. For large accounts, consider implementing
+        // a more targeted approach that only regenerates affected date ranges.
+        if (result.ImportedCount > 0)
+        {
+            await snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId);
+        }
+
         return Results.Ok(result);
     }
     catch (Exception ex)
@@ -388,6 +399,66 @@ app.MapPost("/api/import/upload", async (
     }
 })
 .WithName("ImportTransactions")
+.RequireAuthorization();
+
+// Balance snapshot endpoints
+app.MapPost("/api/snapshots/generate/{accountId}", async (
+    int accountId,
+    HttpContext httpContext,
+    IAccountService accountService,
+    IBalanceSnapshotService snapshotService) =>
+{
+    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (userId == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    // Verify account access
+    if (!await accountService.UserHasAccessToAccountAsync(accountId, userId))
+    {
+        return Results.Forbid();
+    }
+
+    try
+    {
+        var count = await snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId);
+        return Results.Ok(new { message = $"Generated {count} balance snapshots", count });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("GenerateSnapshotsForAccount")
+.RequireAuthorization();
+
+app.MapPost("/api/snapshots/generate-all", async (
+    HttpContext httpContext,
+    IAccountService accountService,
+    IBalanceSnapshotService snapshotService) =>
+{
+    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (userId == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        // Get all accounts the user has access to
+        var accounts = await accountService.GetUserAccountsAsync(userId);
+        var accountIds = accounts.Select(a => a.Id).ToList();
+
+        var count = await snapshotService.RegenerateSnapshotsForAccountsAsync(accountIds);
+        return Results.Ok(new { message = $"Generated {count} balance snapshots for {accountIds.Count} accounts", count, accountCount = accountIds.Count });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("GenerateSnapshotsForAllAccounts")
 .RequireAuthorization();
 
 app.MapDefaultEndpoints();
