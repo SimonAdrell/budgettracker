@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 const authService = {
   login: async (email, password) => {
     const response = await axios.post(`/api/api/auth/login`, {
@@ -28,7 +26,7 @@ const authService = {
 
     if (token) {
       try {
-        await axios.post(`${API_URL}/api/auth/logout`, {}, {
+        await axios.post(`/api/api/auth/logout`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (error) {
