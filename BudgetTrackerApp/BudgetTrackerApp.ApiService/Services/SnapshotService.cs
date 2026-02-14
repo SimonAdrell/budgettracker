@@ -1,43 +1,77 @@
 using BudgetTrackerApp.ApiService.Data;
+using BudgetTrackerApp.ApiService.DTOs;
+using BudgetTrackerApp.ApiService.Extensions;
 using BudgetTrackerApp.ApiService.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BudgetTrackerApp.ApiService.Services;
 
-public class BalanceSnapshotService : IBalanceSnapshotService
+
+/// <summary>
+/// Service for generating and managing balance snapshots for accounts.
+/// Balance snapshots enable efficient querying and graphing of account balances over time.
+/// </summary>
+public interface ISnapshotService
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<BalanceSnapshotService> _logger;
+    /// <summary>
+    /// Generates daily balance snapshots for a specific account within a date range.
+    /// Uses transaction data to calculate the balance at the end of each day.
+    /// </summary>
+    /// <param name="accountId">The account to generate snapshots for</param>
+    /// <param name="startDate">Start date of the range (inclusive)</param>
+    /// <param name="endDate">End date of the range (inclusive)</param>
+    /// <returns>The number of snapshots created or updated</returns>
+    Task<ServiceResponse<int>> GenerateSnapshotsAsync(int accountId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken);
 
-    public BalanceSnapshotService(ApplicationDbContext context, ILogger<BalanceSnapshotService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    /// <summary>
+    /// Generates snapshots for all dates where transactions exist for an account.
+    /// Useful for initial population or after bulk import.
+    /// </summary>
+    /// <param name="accountId">The account to generate snapshots for</param>
+    /// <returns>The number of snapshots created or updated</returns>
+    Task<ServiceResponse<int>> GenerateSnapshotsForAllTransactionsAsync(int accountId, CancellationToken cancellationToken);
 
-    public async Task<int> GenerateSnapshotsAsync(int accountId, DateOnly startDate, DateOnly endDate)
+    /// <summary>
+    /// Regenerates snapshots for multiple accounts.
+    /// Useful for bulk operations or system maintenance.
+    /// </summary>
+    /// <param name="accountIds">List of account IDs to process</param>
+    /// <returns>Total number of snapshots created or updated</returns>
+    Task<ServiceResponse<int>> RegenerateSnapshotsForConnectedAccountsAsync(CancellationToken cancellationToken);
+}
+
+
+public class SnapshotService(ApplicationDbContext context, ILogger<SnapshotService> logger, IServiceGuard serviceGuard, IAccountService accountService) : ISnapshotService
+{
+
+    public async Task<ServiceResponse<int>> GenerateSnapshotsAsync(int accountId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken)
     {
+        if (!await serviceGuard.UserHasAccessToAccount(accountId))
+        {
+            return ServiceResponse<int>.Unauthorized("You do not have access to this account");
+        }
+
         if (startDate > endDate)
         {
             throw new ArgumentException("Start date must be before or equal to end date");
         }
 
-        _logger.LogInformation("Generating balance snapshots for account {AccountId} from {StartDate} to {EndDate}", 
+        logger.Informaion("Generating balance snapshots for account {AccountId} from {StartDate} to {EndDate}",
             accountId, startDate, endDate);
 
         // Get all transactions for the account within the date range and before end date
         // We need transactions before the range to establish the starting balance
-        var transactions = await _context.Transactions
+        var transactions = await context.Transactions
             .Where(t => t.AccountId == accountId && t.TransactionDate <= endDate)
             .OrderBy(t => t.TransactionDate)
             .ThenBy(t => t.Id)
             .Select(t => new { t.TransactionDate, t.Balance })
             .ToListAsync();
 
-        if (!transactions.Any())
+        if (transactions.Count == 0)
         {
-            _logger.LogInformation("No transactions found for account {AccountId}", accountId);
-            return 0;
+            logger.Informaion("No transactions found for account {AccountId}", accountId);
+            return ServiceResponse<int>.Success(0);
         }
 
         int snapshotsProcessed = 0;
@@ -49,8 +83,7 @@ public class BalanceSnapshotService : IBalanceSnapshotService
         {
             // Find the last transaction on or before this date
             var transactionOnOrBeforeDate = transactions
-                .Where(t => t.TransactionDate <= date)
-                .LastOrDefault();
+                .LastOrDefault(t => t.TransactionDate <= date);
 
             if (transactionOnOrBeforeDate != null)
             {
@@ -68,18 +101,23 @@ public class BalanceSnapshotService : IBalanceSnapshotService
         // Batch upsert all snapshots
         await BatchUpsertSnapshotsAsync(accountId, snapshotsToUpsert);
 
-        _logger.LogInformation("Generated {Count} balance snapshots for account {AccountId}", 
+        logger.Informaion("Generated {Count} balance snapshots for account {AccountId}",
             snapshotsProcessed, accountId);
 
-        return snapshotsProcessed;
+        return ServiceResponse<int>.Success(snapshotsProcessed);
     }
 
-    public async Task<int> GenerateSnapshotsForAllTransactionsAsync(int accountId)
+    public async Task<ServiceResponse<int>> GenerateSnapshotsForAllTransactionsAsync(int accountId, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Generating balance snapshots for all transactions in account {AccountId}", accountId);
+        if (!await serviceGuard.UserHasAccessToAccount(accountId))
+        {
+            return ServiceResponse<int>.Unauthorized("You do not have access to this account");
+        }
+
+        logger.Informaion("Generating balance snapshots for all transactions in account {AccountId}", accountId);
 
         // Get the date range from transactions
-        var dateRange = await _context.Transactions
+        var dateRange = await context.Transactions
             .Where(t => t.AccountId == accountId)
             .GroupBy(t => 1)
             .Select(g => new
@@ -87,29 +125,40 @@ public class BalanceSnapshotService : IBalanceSnapshotService
                 MinDate = g.Min(t => t.TransactionDate),
                 MaxDate = g.Max(t => t.TransactionDate)
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (dateRange == null)
         {
-            _logger.LogInformation("No transactions found for account {AccountId}", accountId);
-            return 0;
+            logger.Informaion("No transactions found for account {AccountId}", accountId);
+            return ServiceResponse<int>.Success(0);
         }
 
         // Generate snapshots for the entire range
-        return await GenerateSnapshotsAsync(accountId, dateRange.MinDate, dateRange.MaxDate);
+        return await GenerateSnapshotsAsync(accountId, dateRange.MinDate, dateRange.MaxDate, cancellationToken);
     }
 
-    public async Task<int> RegenerateSnapshotsForAccountsAsync(IEnumerable<int> accountIds)
+    public async Task<ServiceResponse<int>> RegenerateSnapshotsForConnectedAccountsAsync(CancellationToken cancellationToken)
     {
+
+        if (serviceGuard.GetValidUser() is not string userId)
+        {
+            return ServiceResponse<int>.Unauthorized("Invalid user context");
+        }
+
+        var accounts = await accountService.GetUserAccountsAsync(userId, cancellationToken);
+        var accountIds = accounts.Select(a => a.Id).ToList();
         int totalProcessed = 0;
 
         foreach (var accountId in accountIds)
         {
-            var count = await GenerateSnapshotsForAllTransactionsAsync(accountId);
-            totalProcessed += count;
+            var generatedTransactionsResponse = await GenerateSnapshotsForAllTransactionsAsync(accountId, cancellationToken);
+            if (generatedTransactionsResponse.ResponseType == ServiceResponseType.Success)
+            {
+                totalProcessed += generatedTransactionsResponse.Data;
+            }
         }
 
-        return totalProcessed;
+        return ServiceResponse<int>.Success(totalProcessed);
     }
 
     /// <summary>
@@ -119,7 +168,7 @@ public class BalanceSnapshotService : IBalanceSnapshotService
     private async Task UpsertSnapshotAsync(int accountId, DateOnly snapshotDate, decimal balance)
     {
         // Try to find existing snapshot
-        var existingSnapshot = await _context.BalanceSnapshots
+        var existingSnapshot = await context.BalanceSnapshots
             .FirstOrDefaultAsync(bs => bs.AccountId == accountId && bs.SnapshotDate == snapshotDate);
 
         if (existingSnapshot != null)
@@ -129,7 +178,7 @@ public class BalanceSnapshotService : IBalanceSnapshotService
             {
                 existingSnapshot.Balance = balance;
                 existingSnapshot.CreatedAt = DateTime.UtcNow; // Update timestamp to reflect recalculation
-                _logger.LogDebug("Updated snapshot for account {AccountId} on {Date}: {Balance}", 
+                logger.Debug("Updated snapshot for account {AccountId} on {Date}: {Balance}",
                     accountId, snapshotDate, balance);
             }
         }
@@ -144,12 +193,12 @@ public class BalanceSnapshotService : IBalanceSnapshotService
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.BalanceSnapshots.Add(snapshot);
-            _logger.LogDebug("Created snapshot for account {AccountId} on {Date}: {Balance}", 
+            context.BalanceSnapshots.Add(snapshot);
+            logger.Debug("Created snapshot for account {AccountId} on {Date}: {Balance}",
                 accountId, snapshotDate, balance);
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     /// <summary>
@@ -167,7 +216,7 @@ public class BalanceSnapshotService : IBalanceSnapshotService
         var endDate = snapshots.Max(s => s.date);
 
         // Fetch all existing snapshots in the date range
-        var existingSnapshots = await _context.BalanceSnapshots
+        var existingSnapshots = await context.BalanceSnapshots
             .Where(bs => bs.AccountId == accountId && bs.SnapshotDate >= startDate && bs.SnapshotDate <= endDate)
             .ToDictionaryAsync(bs => bs.SnapshotDate, bs => bs);
 
@@ -197,14 +246,14 @@ public class BalanceSnapshotService : IBalanceSnapshotService
                     CreatedAt = DateTime.UtcNow
                 };
 
-                _context.BalanceSnapshots.Add(snapshot);
+                context.BalanceSnapshots.Add(snapshot);
                 createdCount++;
             }
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        _logger.LogDebug("Batch upserted snapshots for account {AccountId}: {CreatedCount} created, {UpdatedCount} updated", 
+        logger.Debug("Batch upserted snapshots for account {AccountId}: {CreatedCount} created, {UpdatedCount} updated",
             accountId, createdCount, updatedCount);
     }
 }

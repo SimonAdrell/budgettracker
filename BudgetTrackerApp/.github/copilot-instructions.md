@@ -1,93 +1,124 @@
 # BudgetTrackerApp Copilot Instructions
 
-## Architecture Overview
+## What This Is
 
-This is a **microservices-based .NET 10.0 Aspire application** with three service tiers:
+A **personal budget tracking SPA** built with .NET 10 Aspire, ASP.NET Core Identity, PostgreSQL, and React. Multi-user with role-based account access, transaction import from bank exports, and balance history snapshots.
 
-### Service Structure
-- **BudgetTrackerApp.AppHost**: Orchestrator using Aspire's `DistributedApplication` - defines service discovery, health checks, and startup coordination (see [AppHost.cs](../BudgetTrackerApp.AppHost/AppHost.cs))
-- **BudgetTrackerApp.Web**: Frontend - Blazor Web App with interactive server rendering, communicates with API via `WeatherApiClient` (see [Program.cs](../BudgetTrackerApp.Web/Program.cs))
-- **BudgetTrackerApp.ApiService**: Backend - ASP.NET Core API with OpenAPI/Swagger, currently exposes `/weatherforecast` endpoint (see [Program.cs](../BudgetTrackerApp.ApiService/Program.cs))
-- **BudgetTrackerApp.ServiceDefaults**: Shared configuration - centralizes Aspire setup, OpenTelemetry, service discovery, resilience handlers (see [Extensions.cs](../BudgetTrackerApp.ServiceDefaults/Extensions.cs))
+## Architecture
 
-### Cross-Service Communication
-Services use **service discovery with resilience by default** via `AddServiceDiscovery()` and `AddStandardResilienceHandler()`. The Web frontend references ApiService using the discovery scheme `https+http://apiservice` (prefers HTTPS, falls back to HTTP).
+### Three-Tier Design
+1. **AppHost** [BudgetTrackerApp.AppHost/AppHost.cs](../BudgetTrackerApp.AppHost/AppHost.cs): Aspire orchestrator - manages PostgreSQL container, service discovery, health checks
+2. **API** [BudgetTrackerApp.ApiService/Program.cs](../BudgetTrackerApp.ApiService/Program.cs): ASP.NET Core with Identity + JWT auth; uses Entity Framework Core with PostgreSQL
+3. **Frontend**: React SPA in `frontend/` directory (separate npm project); communicates via HTTP to API
+
+### Key Domain Entities
+- **Account**: Bank/investment account (has Name, AccountNumber)
+- **Transaction**: Ledger entries linked to Account and Category
+- **Category**: Transaction classification (Name, Description, Color for UI)
+- **BalanceSnapshot**: Historical balance records for Account on specific date (for trend analysis)
+- **AccountUser**: Many-to-many junction with Role field (Owner/Viewer/Editor pattern)
+
+Schema: [docs/database/SCHEMA_OVERVIEW.md](../../docs/database/SCHEMA_OVERVIEW.md)
 
 ## Project-Specific Patterns
 
-### Service Registration Pattern
-All services register common defaults via `builder.AddServiceDefaults()`:
+### Service Layer Pattern
+All business logic goes in `Services/` with matching `IService` interface:
+- [IAccountService.cs](../BudgetTrackerApp.ApiService/Services/IAccountService.cs): Account management + user access checks
+- [IBalanceSnapshotService.cs](../BudgetTrackerApp.ApiService/Services/IBalanceSnapshotService.cs): Snapshot generation
+- [IImportService.cs](../BudgetTrackerApp.ApiService/Services/IImportService.cs): Bank CSV import parsing
+
+Services are registered in Program.cs and injected into Controllers. **Always validate user has access** via `UserHasAccessToAccountAsync()` before returning data.
+
+### Controller Endpoints Pattern
+Controllers live in [Controllers/](../BudgetTrackerApp.ApiService/Controllers/) and use:
 ```csharp
-var builder = WebApplication.CreateBuilder(args);
-builder.AddServiceDefaults();  // Configures health checks, OpenTelemetry, resilience
+[Authorize]
+[Route("api/[controller]")]
+[ApiController]
+public class AccountsController : ControllerBase
+{
+    // Extract UserId via: var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    // Call service: var account = await _accountService.GetAccountByIdAsync(id, userId);
+}
 ```
-This is mandatory for every service. See [Extensions.cs](../BudgetTrackerApp.ServiceDefaults/Extensions.cs) for what gets configured.
+All endpoints **must** use `[Authorize]` and verify access. Return `Forbid()` if user lacks access.
 
-### Health Checks
-All services expose `/health` (liveness) and `/alive` endpoints. AppHost orchestrator waits for health readiness before starting dependent services via `.WaitFor(apiService)`.
+### Authentication Flow
+- **Login**: `POST /api/auth/login` returns JWT (short-lived) + RefreshToken (long-lived in DB)
+- **Refresh**: `POST /api/auth/refresh` exchanges RefreshToken for new JWT
+- **JWT Config**: Keys in `appsettings.json` (Jwt:Key, Jwt:Issuer, Jwt:Audience); Identity options set in Program.cs
+- React frontend stores JWT in localStorage and includes in all API calls
 
-### Build Configuration (Directory.Build.props)
-- Target framework: **net10.0**
-- **Nullable reference types enabled** (`<Nullable>enable</Nullable>`)
-- **Treat warnings as errors** (`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`)
-- **Implicit usings enabled** - no need for explicit `using` statements for common namespaces
+### Database Access
+- DbContext: [ApplicationDbContext.cs](../BudgetTrackerApp.ApiService/Data/ApplicationDbContext.cs) extends `IdentityDbContext<ApplicationUser>`
+- Migrations auto-run on startup via AppHost
+- Npgsql configured in Program.cs: `builder.AddNpgsqlDbContext<ApplicationDbContext>("identitydb")`
+- PostgreSQL container managed by Aspire with named volume `identitydb-volume` for persistence
 
-## Key Workflows
+### DTOs
+Request/response objects in [DTOs/](../BudgetTrackerApp.ApiService/DTOs/):
+- [AuthDTOs.cs](../BudgetTrackerApp.ApiService/DTOs/AuthDTOs.cs): LoginRequest, RegisterRequest, TokenResponse
+- [ImportDTOs.cs](../BudgetTrackerApp.ApiService/DTOs/ImportDTOs.cs): CSV import models
 
-### Build & Run
+Use DTOs to decouple API contracts from database models.
+
+## Essential Commands
+
 ```powershell
-# Build all projects
+# Start entire app (Aspire orchestrates all services + PostgreSQL)
+cd BudgetTrackerApp/BudgetTrackerApp.AppHost
+dotnet run
+
+# Run tests (creates isolated Aspire environment)
+dotnet test BudgetTrackerApp/BudgetTrackerApp.Tests/
+
+# Build check (treats warnings as errors per Directory.Build.props)
 dotnet build
-
-# Run via Aspire orchestrator (starts all services)
-dotnet run --project BudgetTrackerApp.AppHost
-
-# Run single service (for testing)
-dotnet run --project BudgetTrackerApp.Web
 ```
 
-### Testing
-Run integration tests that spin up the full Aspire application:
-```powershell
-dotnet test BudgetTrackerApp.Tests/BudgetTrackerApp.Tests.csproj
-```
-Tests use `DistributedApplicationTestingBuilder` to create an isolated test environment with actual service startup (see [WebTests.cs](../BudgetTrackerApp.Tests/WebTests.cs)).
+**Never** run services individually unless debugging a specific service—AppHost handles wiring.
 
-### API Endpoints (Development)
-- **Web Frontend**: `https://localhost:5173` (via Aspire)
-- **Api Service Swagger**: Navigate to `/openapi/v1.json` when using AppHost (see [ApiService Program.cs](../BudgetTrackerApp.ApiService/Program.cs) - only exposed in Development)
+## Code Style (Non-Negotiable)
 
-## Code Style & Conventions
-
-- **Nullable-first**: All reference types are non-nullable by default; use `?` for nullable types
-- **No bare exceptions**: Code treats warnings as errors; handle all potential exceptions explicitly
-- **Primary constructors**: Use C# 12 primary constructor syntax (e.g., `public class WeatherApiClient(HttpClient httpClient)`)
-- **Records over classes**: Use `record` for simple data transfer objects (e.g., `WeatherForecast` in [WeatherApiClient.cs](../BudgetTrackerApp.Web/WeatherApiClient.cs))
-- **Implicit using statements**: All projects have implicit usings; no need to add standard `using` directives
+- **Nullable types**: `<Nullable>enable</Nullable>` in csproj; non-nullable by default, `?` for nullable
+- **Warnings → Errors**: `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`; no suppression without justification
+- **Implicit usings**: No need for manual `using` statements
+- **Primary constructors** (C# 12): `public class Service(ILogger<Service> logger)`
+- **Records for DTOs**: `public record LoginRequest(string Email, string Password);`
 
 ## File Organization
 
 ```
-/BudgetTrackerApp.Web/
-  Components/           # Razor components (App.razor, Pages/, Layout/)
-  WeatherApiClient.cs   # Service-to-service HTTP clients
-  Program.cs            # Web service startup configuration
-
-/BudgetTrackerApp.ApiService/
-  Program.cs            # API service startup + route definitions
-
-/BudgetTrackerApp.Tests/
-  WebTests.cs           # Integration tests using Aspire test builder
+ApiService/
+  Controllers/        → HTTP endpoints (one file per entity type)
+  Services/           → Business logic (interface + implementation)
+  DTOs/               → Request/response contracts
+  Models/             → EF Core entities
+  Data/               → DbContext + migrations
+  Program.cs          → Service registration, middleware
 ```
 
-## Critical Integration Points
+## Critical Gotchas
 
-1. **Service Discovery**: The Web app discovers the ApiService by hostname `apiservice` (defined in AppHost). Update [AppHost.cs](../BudgetTrackerApp.AppHost/AppHost.cs) when adding new services.
-2. **OpenTelemetry**: All services emit traces, logs, and metrics via shared configuration in [Extensions.cs](../BudgetTrackerApp.ServiceDefaults/Extensions.cs#L45-L70).
-3. **HttpClient Defaults**: All services apply resilience policies (retry, timeout) globally via `ConfigureHttpClientDefaults()` in [Extensions.cs](../BudgetTrackerApp.ServiceDefaults/Extensions.cs#L33-L40).
+1. **User Access Checks**: Every endpoint **must** verify `UserHasAccessToAccountAsync()` or similar—don't leak data across user boundaries
+2. **Service Discovery Name**: "apiservice" must match both AppHost definition AND HttpClient base address in Web/Program.cs
+3. **Migrations**: Changes to Models require `dotnet ef migrations add` + commit; AppHost auto-applies on startup
+4. **PostgreSQL State**: Container persists to `identitydb-volume` Docker volume; stopping AppHost keeps data
+5. **React Build**: Separate `npm run build` in `frontend/` dir; not included in .NET build
 
-## Quick Debugging Tips
+## When Adding Endpoints
 
-- **Service won't start?** Check health check endpoint: `curl https://localhost:[port]/health`
-- **Service discovery failing?** Ensure service name in AppHost matches the discovery hostname in HttpClient base address
-- **Async streaming pattern**: Web app uses `GetFromJsonAsAsyncEnumerable` for efficient streaming from API (see [WeatherApiClient.cs](../BudgetTrackerApp.Web/WeatherApiClient.cs#L6-L17))
+1. Create/update Controller in [Controllers/](../BudgetTrackerApp.ApiService/Controllers/)
+2. Call service (check user access inside service or controller)
+3. Return DTOs, not models
+4. Add `[Authorize]` attribute
+5. Update [API_REFERENCE.md](../../API_REFERENCE.md) with endpoint signature
+6. Write test in [BudgetTrackerApp.Tests/](../BudgetTrackerApp.Tests/)
+
+## Debugging
+
+- **Aspire Dashboard**: `http://localhost:15xxx` (port in console); shows resource health, logs, traces
+- **Database**: `psql` into running container or use EF Core migrations for schema inspection
+- **JWT Decode**: Copy token from API response, paste into [jwt.io](https://jwt.io) to verify claims
+- **Logs**: Check controller action + service method for early returns/forbids

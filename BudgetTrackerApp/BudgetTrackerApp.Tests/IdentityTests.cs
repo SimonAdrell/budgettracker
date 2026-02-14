@@ -61,7 +61,7 @@ public class IdentityTests
 
         // Assert - Login
         Assert.True(loginResponse.IsSuccessStatusCode, $"Login failed: {await loginResponse.Content.ReadAsStringAsync(cancellationToken)}");
-        
+
         var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
         Assert.NotNull(authResponse);
         Assert.NotEmpty(authResponse.Token);
@@ -118,10 +118,10 @@ public class IdentityTests
         var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
 
         // Act - Access protected endpoint
-        httpClient.DefaultRequestHeaders.Authorization = 
+        httpClient.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
 
-        var weatherResponse = await httpClient.GetAsync("/weatherforecast", cancellationToken);
+        var weatherResponse = await httpClient.GetAsync("/api/accounts", cancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, weatherResponse.StatusCode);
@@ -152,7 +152,7 @@ public class IdentityTests
         await app.ResourceNotifications.WaitForResourceHealthyAsync("apiservice", cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
 
         // Act
-        var weatherResponse = await httpClient.GetAsync("/weatherforecast", cancellationToken);
+        var weatherResponse = await httpClient.GetAsync("/api/accounts", cancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, weatherResponse.StatusCode);
@@ -215,7 +215,7 @@ public class IdentityTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
-        
+
         var newAuthResponse = await refreshResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
         Assert.NotNull(newAuthResponse);
         Assert.NotEmpty(newAuthResponse.Token);

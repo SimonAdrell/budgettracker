@@ -5,6 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BudgetTrackerApp.ApiService.Services;
 
+public interface IAccountService
+{
+    Task<List<AccountDto>> GetUserAccountsAsync(string userId, CancellationToken cancellationToken);
+    Task<AccountDto?> GetAccountByIdAsync(int accountId, string userId, CancellationToken cancellationToken);
+    Task<AccountDto> CreateAccountAsync(CreateAccountRequest request, string userId, CancellationToken cancellationToken);
+    Task<bool> UserHasAccessToAccountAsync(int accountId, string userId, CancellationToken cancellationToken);
+}
+
+
 public class AccountService : IAccountService
 {
     private readonly ApplicationDbContext _context;
@@ -14,7 +23,7 @@ public class AccountService : IAccountService
         _context = context;
     }
 
-    public async Task<List<AccountDto>> GetUserAccountsAsync(string userId)
+    public async Task<List<AccountDto>> GetUserAccountsAsync(string userId, CancellationToken cancellationToken)
     {
         var accounts = await _context.AccountUsers
             .Where(au => au.UserId == userId)
@@ -27,12 +36,12 @@ public class AccountService : IAccountService
                 CreatedAt = au.Account.CreatedAt,
                 UpdatedAt = au.Account.UpdatedAt
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return accounts;
     }
 
-    public async Task<AccountDto?> GetAccountByIdAsync(int accountId, string userId)
+    public async Task<AccountDto?> GetAccountByIdAsync(int accountId, string userId, CancellationToken cancellationToken)
     {
         var account = await _context.AccountUsers
             .Where(au => au.AccountId == accountId && au.UserId == userId)
@@ -45,12 +54,12 @@ public class AccountService : IAccountService
                 CreatedAt = au.Account.CreatedAt,
                 UpdatedAt = au.Account.UpdatedAt
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         return account;
     }
 
-    public async Task<AccountDto> CreateAccountAsync(CreateAccountRequest request, string userId)
+    public async Task<AccountDto> CreateAccountAsync(CreateAccountRequest request, string userId, CancellationToken cancellationToken)
     {
         var account = new Account
         {
@@ -61,7 +70,7 @@ public class AccountService : IAccountService
         };
 
         _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Create AccountUser relationship with Owner role
         var accountUser = new AccountUser
@@ -73,7 +82,7 @@ public class AccountService : IAccountService
         };
 
         _context.AccountUsers.Add(accountUser);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         return new AccountDto
         {
@@ -85,9 +94,9 @@ public class AccountService : IAccountService
         };
     }
 
-    public async Task<bool> UserHasAccessToAccountAsync(int accountId, string userId)
+    public async Task<bool> UserHasAccessToAccountAsync(int accountId, string userId, CancellationToken cancellationToken)
     {
         return await _context.AccountUsers
-            .AnyAsync(au => au.AccountId == accountId && au.UserId == userId);
+            .AnyAsync(au => au.AccountId == accountId && au.UserId == userId, cancellationToken);
     }
 }
