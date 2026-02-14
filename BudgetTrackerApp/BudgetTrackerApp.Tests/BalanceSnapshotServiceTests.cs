@@ -1,4 +1,5 @@
 using BudgetTrackerApp.ApiService.Data;
+using BudgetTrackerApp.ApiService.DTOs;
 using BudgetTrackerApp.ApiService.Models;
 using BudgetTrackerApp.ApiService.Services;
 using Microsoft.EntityFrameworkCore;
@@ -7,13 +8,14 @@ using Moq;
 
 namespace BudgetTrackerApp.Tests;
 
-#pragma warning disable xUnit1051 // CancellationToken not required for unit tests
 
 public class BalanceSnapshotServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
-    private readonly BalanceSnapshotService _service;
-    private readonly Mock<ILogger<BalanceSnapshotService>> _loggerMock;
+    private readonly SnapshotService _service;
+    private readonly Mock<ILogger<SnapshotService>> _loggerMock;
+    private readonly Mock<IServiceGuard> _serviceGuardMock;
+    private readonly Mock<IAccountService> _accountServiceMock;
 
     public BalanceSnapshotServiceTests()
     {
@@ -23,8 +25,15 @@ public class BalanceSnapshotServiceTests : IDisposable
             .Options;
 
         _context = new ApplicationDbContext(options);
-        _loggerMock = new Mock<ILogger<BalanceSnapshotService>>();
-        _service = new BalanceSnapshotService(_context, _loggerMock.Object);
+        _loggerMock = new Mock<ILogger<SnapshotService>>();
+        _serviceGuardMock = new Mock<IServiceGuard>();
+        _accountServiceMock = new Mock<IAccountService>();
+
+        _serviceGuardMock.Setup(g => g.UserIsValid()).Returns(true);
+        _serviceGuardMock.Setup(g => g.UserHasAccessToAccount(It.IsAny<int>())).ReturnsAsync(true);
+        _serviceGuardMock.Setup(g => g.GetValidUser()).Returns(Guid.NewGuid().ToString());
+
+        _service = new SnapshotService(_context, _loggerMock.Object, _serviceGuardMock.Object, _accountServiceMock.Object);
     }
 
     public void Dispose()
@@ -42,11 +51,11 @@ public class BalanceSnapshotServiceTests : IDisposable
         var endDate = new DateOnly(2024, 1, 31);
 
         // Act
-        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate);
+        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0, result);
-        var snapshots = await _context.BalanceSnapshots.ToListAsync();
+        Assert.Equal(0, result.Data);
+        var snapshots = await _context.BalanceSnapshots.ToListAsync(TestContext.Current.CancellationToken);
         Assert.Empty(snapshots);
     }
 
@@ -74,25 +83,25 @@ public class BalanceSnapshotServiceTests : IDisposable
             Balance = 1000.00m
         };
         _context.Transactions.Add(transaction);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate);
+        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate, TestContext.Current.CancellationToken);
 
         // Assert
         // Should create snapshots from the first transaction date (Jan 15) to end date (Jan 31)
         // That's 17 days: Jan 15-31 inclusive
-        Assert.Equal(17, result);
+        Assert.Equal(17, result.Data);
         var snapshots = await _context.BalanceSnapshots
             .Where(s => s.AccountId == accountId)
             .OrderBy(s => s.SnapshotDate)
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(17, snapshots.Count);
         // All snapshots should have balance of 1000.00 since there are no other transactions
         Assert.All(snapshots, s => Assert.Equal(1000.00m, s.Balance));
-        Assert.Equal(transactionDate, snapshots.First().SnapshotDate);
-        Assert.Equal(endDate, snapshots.Last().SnapshotDate);
+        Assert.Equal(transactionDate, snapshots[0].SnapshotDate);
+        Assert.Equal(endDate, snapshots[snapshots.Count - 1].SnapshotDate);
     }
 
     [Fact]
@@ -137,17 +146,17 @@ public class BalanceSnapshotServiceTests : IDisposable
                 Balance = 1300.00m
             }
         );
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate);
+        var result = await _service.GenerateSnapshotsAsync(accountId, startDate, endDate, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(5, result);
+        Assert.Equal(5, result.Data);
         var snapshots = await _context.BalanceSnapshots
             .Where(s => s.AccountId == accountId)
             .OrderBy(s => s.SnapshotDate)
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(5, snapshots.Count);
         Assert.Equal(1000.00m, snapshots[0].Balance); // Jan 1
@@ -198,14 +207,14 @@ public class BalanceSnapshotServiceTests : IDisposable
                 Balance = 1120.00m
             }
         );
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.GenerateSnapshotsAsync(accountId, date, date);
+        var result = await _service.GenerateSnapshotsAsync(accountId, date, date, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(1, result);
-        var snapshot = await _context.BalanceSnapshots.FirstOrDefaultAsync(s => s.AccountId == accountId && s.SnapshotDate == date);
+        Assert.Equal(1, result.Data);
+        var snapshot = await _context.BalanceSnapshots.FirstOrDefaultAsync(s => s.AccountId == accountId && s.SnapshotDate == date, TestContext.Current.CancellationToken);
         Assert.NotNull(snapshot);
         Assert.Equal(1120.00m, snapshot.Balance); // Should use the last transaction's balance
     }
@@ -241,14 +250,14 @@ public class BalanceSnapshotServiceTests : IDisposable
             Balance = 1000.00m
         };
         _context.Transactions.Add(transaction);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.GenerateSnapshotsAsync(accountId, date, date);
+        var result = await _service.GenerateSnapshotsAsync(accountId, date, date, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(1, result);
-        var snapshot = await _context.BalanceSnapshots.FirstOrDefaultAsync(s => s.AccountId == accountId && s.SnapshotDate == date);
+        Assert.Equal(1, result.Data);
+        var snapshot = await _context.BalanceSnapshots.FirstOrDefaultAsync(s => s.AccountId == accountId && s.SnapshotDate == date, TestContext.Current.CancellationToken);
         Assert.NotNull(snapshot);
         Assert.Equal(1000.00m, snapshot.Balance); // Should be updated to new balance
     }
@@ -263,7 +272,7 @@ public class BalanceSnapshotServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.GenerateSnapshotsAsync(accountId, startDate, endDate));
+            _service.GenerateSnapshotsAsync(accountId, startDate, endDate, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -273,10 +282,10 @@ public class BalanceSnapshotServiceTests : IDisposable
         int accountId = 1;
 
         // Act
-        var result = await _service.GenerateSnapshotsForAllTransactionsAsync(accountId);
+        var result = await _service.GenerateSnapshotsForAllTransactionsAsync(accountId, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0, result);
+        Assert.Equal(0, result.Data);
     }
 
     [Fact]
@@ -319,21 +328,21 @@ public class BalanceSnapshotServiceTests : IDisposable
                 Balance = 1300.00m
             }
         );
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.GenerateSnapshotsForAllTransactionsAsync(accountId);
+        var result = await _service.GenerateSnapshotsForAllTransactionsAsync(accountId, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(31, result); // Should cover Jan 1 to Jan 31
+        Assert.Equal(31, result.Data); // Should cover Jan 1 to Jan 31
         var snapshots = await _context.BalanceSnapshots
             .Where(s => s.AccountId == accountId)
             .OrderBy(s => s.SnapshotDate)
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(31, snapshots.Count);
-        Assert.Equal(new DateOnly(2024, 1, 1), snapshots.First().SnapshotDate);
-        Assert.Equal(new DateOnly(2024, 1, 31), snapshots.Last().SnapshotDate);
+        Assert.Equal(new DateOnly(2024, 1, 1), snapshots[0].SnapshotDate);
+        Assert.Equal(new DateOnly(2024, 1, 31), snapshots[snapshots.Count - 1].SnapshotDate);
     }
 
     [Fact]
@@ -368,15 +377,22 @@ public class BalanceSnapshotServiceTests : IDisposable
                 Balance = 2000.00m
             }
         );
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _accountServiceMock.Setup(e => e.GetUserAccountsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new List<AccountDto>
+        {
+            new AccountDto { Id = 1, Name = "Account 1" },
+            new AccountDto { Id = 2, Name = "Account 2" }
+        });
 
         // Act
-        var result = await _service.RegenerateSnapshotsForAccountsAsync(new[] { 1, 2 });
+        var result = await _service.RegenerateSnapshotsForConnectedAccountsAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result); // One snapshot per account
-        var account1Snapshots = await _context.BalanceSnapshots.Where(s => s.AccountId == 1).ToListAsync();
-        var account2Snapshots = await _context.BalanceSnapshots.Where(s => s.AccountId == 2).ToListAsync();
+        Assert.Equal(2, result.Data); // One snapshot per account
+        var account1Snapshots = await _context.BalanceSnapshots.Where(s => s.AccountId == 1).ToListAsync(TestContext.Current.CancellationToken);
+        var account2Snapshots = await _context.BalanceSnapshots.Where(s => s.AccountId == 2).ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Single(account1Snapshots);
         Assert.Single(account2Snapshots);

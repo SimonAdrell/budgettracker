@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +17,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add services to the container.
-builder.Services.AddProblemDetails();
+builder.Services.AddControllers();
+
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Instance =
+            $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+
+        Activity? activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
+        context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
+    });
+
 
 // Configure PostgreSQL with Aspire
 builder.AddNpgsqlDbContext<ApplicationDbContext>("identitydb");
@@ -65,14 +80,11 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-
 // Register TokenService
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Register Account and Import services
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<IImportService, ImportService>();
-builder.Services.AddScoped<IBalanceSnapshotService, BalanceSnapshotService>();
+builder.Services.AddServices();
 
 // Configure CORS for React SPA
 builder.Services.AddCors(options =>
@@ -91,6 +103,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddHttpLogging(o => { });
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -104,36 +118,28 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+
+app.UseHttpLogging();
 app.UseExceptionHandler();
+
+app.UseCors("ReactApp");
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseEndpoints(endpoints =>
+{
+});
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
-app.UseCors("ReactApp");
+app.MapControllers();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 
 app.MapGet("/", () => "API service is running. Navigate to /weatherforecast to see sample data.");
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.RequireAuthorization(); // Require authentication for this endpoint
 
 // Authentication endpoints
 app.MapPost("/api/auth/register", async (
@@ -304,7 +310,7 @@ app.MapGet("/api/accounts", async (
         return Results.Unauthorized();
     }
 
-    var accounts = await accountService.GetUserAccountsAsync(userId);
+    var accounts = await accountService.GetUserAccountsAsync(userId, httpContext.RequestAborted);
     return Results.Ok(accounts);
 })
 .WithName("GetAccounts")
@@ -326,147 +332,13 @@ app.MapPost("/api/accounts", async (
         return Results.BadRequest(new { error = "Account name is required" });
     }
 
-    var account = await accountService.CreateAccountAsync(request, userId);
+    var account = await accountService.CreateAccountAsync(request, userId, httpContext.RequestAborted);
     return Results.Ok(account);
 })
 .WithName("CreateAccount")
 .RequireAuthorization();
 
-// Import endpoint
-app.MapPost("/api/import/upload", async (
-    HttpContext httpContext,
-    IImportService importService,
-    IAccountService accountService,
-    IBalanceSnapshotService snapshotService) =>
-{
-    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (userId == null)
-    {
-        return Results.Unauthorized();
-    }
-
-    var form = await httpContext.Request.ReadFormAsync();
-    var file = form.Files["file"];
-    var accountIdStr = form["accountId"].ToString();
-
-    if (file == null || file.Length == 0)
-    {
-        return Results.BadRequest(new { error = "No file uploaded" });
-    }
-
-    if (!int.TryParse(accountIdStr, out var accountId))
-    {
-        return Results.BadRequest(new { error = "Invalid account ID" });
-    }
-
-    // Verify account access
-    if (!await accountService.UserHasAccessToAccountAsync(accountId, userId))
-    {
-        return Results.Forbid();
-    }
-
-    // Check file extension
-    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-    if (extension != ".xls" && extension != ".xlsx")
-    {
-        return Results.BadRequest(new { error = "Only Excel files (.xls, .xlsx) are supported" });
-    }
-
-    try
-    {
-        using var stream = file.OpenReadStream();
-        var result = await importService.ImportTransactionsFromExcelAsync(stream, accountId, userId);
-        
-        if (!result.Success)
-        {
-            return Results.BadRequest(result);
-        }
-
-        // Generate balance snapshots after successful import
-        // Note: We regenerate all snapshots to ensure correctness, as new transactions
-        // may affect the balance history. For large accounts, consider implementing
-        // a more targeted approach that only regenerates affected date ranges.
-        if (result.ImportedCount > 0)
-        {
-            await snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId);
-        }
-
-        return Results.Ok(result);
-    }
-    catch (Exception ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("ImportTransactions")
-.RequireAuthorization();
-
-// Balance snapshot endpoints
-app.MapPost("/api/snapshots/generate/{accountId}", async (
-    int accountId,
-    HttpContext httpContext,
-    IAccountService accountService,
-    IBalanceSnapshotService snapshotService) =>
-{
-    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (userId == null)
-    {
-        return Results.Unauthorized();
-    }
-
-    // Verify account access
-    if (!await accountService.UserHasAccessToAccountAsync(accountId, userId))
-    {
-        return Results.Forbid();
-    }
-
-    try
-    {
-        var count = await snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId);
-        return Results.Ok(new { message = $"Generated {count} balance snapshots", count });
-    }
-    catch (Exception ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("GenerateSnapshotsForAccount")
-.RequireAuthorization();
-
-app.MapPost("/api/snapshots/generate-all", async (
-    HttpContext httpContext,
-    IAccountService accountService,
-    IBalanceSnapshotService snapshotService) =>
-{
-    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (userId == null)
-    {
-        return Results.Unauthorized();
-    }
-
-    try
-    {
-        // Get all accounts the user has access to
-        var accounts = await accountService.GetUserAccountsAsync(userId);
-        var accountIds = accounts.Select(a => a.Id).ToList();
-
-        var count = await snapshotService.RegenerateSnapshotsForAccountsAsync(accountIds);
-        return Results.Ok(new { message = $"Generated {count} balance snapshots for {accountIds.Count} accounts", count, accountCount = accountIds.Count });
-    }
-    catch (Exception ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("GenerateSnapshotsForAllAccounts")
-.RequireAuthorization();
 
 app.MapDefaultEndpoints();
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
+await app.RunAsync();
