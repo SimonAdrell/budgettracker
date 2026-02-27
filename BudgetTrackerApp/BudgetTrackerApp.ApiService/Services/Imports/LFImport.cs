@@ -36,6 +36,7 @@ public class LFImport : ImportBase, ITransactionImport
                     break;
             }
         }
+
         return importColumns;
     }
 }

@@ -1,11 +1,13 @@
 using BudgetTrackerApp.ApiService.DTOs;
 using BudgetTrackerApp.ApiService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BudgetTrackerApp.ApiService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ImportController(IImportService importService) : ControllerBase
     {
         [HttpPost("upload")]

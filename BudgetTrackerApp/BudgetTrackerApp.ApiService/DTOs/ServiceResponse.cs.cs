@@ -13,7 +13,8 @@ public enum ServiceResponseType
     Created,
     Failure,
     Conflict,
-    Unauthorized
+    Unauthorized,
+    Forbidden
 }
 
 
@@ -47,6 +48,10 @@ public record class ServiceResponse<T>
         (ServiceResponseType.Unauthorized, _) => CreateProblemDetails(httpContext,
             StatusCodes.Status401Unauthorized,
             "Unauthorized",
+            Message),
+        (ServiceResponseType.Forbidden, _) => CreateProblemDetails(httpContext,
+            StatusCodes.Status403Forbidden,
+            "Forbidden",
             Message),
         _ => new OkObjectResult(Data)
     };
@@ -144,5 +149,11 @@ public record class ServiceResponse<T>
     {
         Message = message,
         ResponseType = ServiceResponseType.Unauthorized
+    };
+
+    public static ServiceResponse<T> Forbid(string message) => new()
+    {
+        Message = message,
+        ResponseType = ServiceResponseType.Forbidden
     };
 }

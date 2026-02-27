@@ -62,7 +62,7 @@ public class ImportService : IImportService
 
         if (!await _accountService.UserHasAccessToAccountAsync(accountId, userId, cancellationToken))
         {
-            return ServiceResponse<ImportResponse>.Unauthorized("You do not have access to this account");
+            return ServiceResponse<ImportResponse>.Forbid("You do not have access to this account");
         }
 
         // Check file extension
@@ -126,25 +126,30 @@ public class ImportService : IImportService
 
             await _context.SaveChangesAsync(cancellationToken);
 
+            // Generate balance snapshots after successful import persistence.
+            // Note: We regenerate all snapshots to ensure correctness, as new transactions
+            // may affect the balance history. For large accounts, consider implementing
+            // a more targeted approach that only regenerates affected date ranges.
+            if (response.ImportedCount > 0)
+            {
+                await _snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId, cancellationToken);
+            }
+
             response.Success = true;
+            return ServiceResponse<ImportResponse>.Success(response);
         }
         catch (Exception ex)
         {
             response.Success = false;
             response.Errors.Add($"Error importing transactions: {ex.Message}");
             response.ErrorCount++;
+            return new ServiceResponse<ImportResponse>
+            {
+                Data = response,
+                Message = "Import failed",
+                ResponseType = ServiceResponseType.Failure
+            };
         }
-
-        // Generate balance snapshots after successful import
-        // Note: We regenerate all snapshots to ensure correctness, as new transactions
-        // may affect the balance history. For large accounts, consider implementing
-        // a more targeted approach that only regenerates affected date ranges.
-        if (response.ImportedCount > 0)
-        {
-            await _snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId, cancellationToken);
-        }
-
-        return ServiceResponse<ImportResponse>.Success(response);
     }
 
     public ImportValidationResult ValidateImportData(List<TransactionImportDto> transactions)

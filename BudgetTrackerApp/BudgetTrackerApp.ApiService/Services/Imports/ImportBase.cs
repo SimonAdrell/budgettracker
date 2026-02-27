@@ -52,7 +52,9 @@ public class ImportBase()
 
             // Skip empty rows
             if (bookingDateValue == null && string.IsNullOrWhiteSpace(description))
+            {
                 return null;
+            }
 
             return new TransactionImportDto
             {
@@ -64,9 +66,9 @@ public class ImportBase()
                 OriginalText = $"{bookingDateValue}|{transactionDateValue}|{description}|{amountValue}|{balanceValue}"
             };
         }
-        catch (System.Exception)
+        catch (Exception ex)
         {
-            return null;
+            throw new InvalidOperationException($"Invalid transaction data on row {reader.Depth + 1}", ex);
         }
     }
 
@@ -107,7 +109,7 @@ public class ImportBase()
             var dateText = dateValue?.ToString()?.Trim() ?? "";
             if (!DateOnly.TryParse(dateText, new CultureInfo(dateCulture), out date))
             {
-                throw new InvalidOperationException($"Invalid date");
+                throw new InvalidOperationException("Invalid date");
             }
         }
 
