@@ -1,8 +1,17 @@
+using Microsoft.Extensions.Hosting;
+
 var builder = DistributedApplication.CreateBuilder(args);
+var postgresPassword = builder.AddParameter(
+    "postgres-password",
+    builder.Configuration["POSTGRES_PASSWORD"] ?? "postgres",
+    secret: true);
 
 // Add PostgreSQL with data volume for persistence
-var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume();
+var postgres = builder.AddPostgres("postgres", password: postgresPassword);
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    postgres = postgres.WithDataVolume();
+}
 
 var identityDb = postgres.AddDatabase("identitydb");
 

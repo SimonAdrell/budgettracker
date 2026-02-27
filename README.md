@@ -109,6 +109,37 @@ For detailed information about the Identity integration, authentication endpoint
 - **POST** `/api/auth/refresh` - Refresh access token
 - **POST** `/api/auth/logout` - Logout and revoke refresh tokens
 - **GET** `/weatherforecast` - Protected endpoint example
+- **GET** `/api/v1/analytics/balance-over-time` - Balance trend points
+- **GET** `/api/v1/analytics/income-vs-expenses` - Income/expense/net trend points
+- **GET** `/api/v1/analytics/spending-by-category` - Category spend totals
+- **GET** `/api/v1/analytics/category-spending-over-time` - Category spend trend by bucket
+- **GET** `/api/v1/analytics/net-worth-over-time` - Net worth trend points
+
+### Analytics API (`/api/v1/analytics`)
+
+All analytics endpoints require authentication and share these query parameters:
+- `fromUtc` (optional, ISO-8601 UTC)
+- `toUtc` (optional, ISO-8601 UTC)
+- `bucket` (optional: `day|week|month`, default `month`)
+- `accountId` (optional; if omitted, aggregates all accounts for the current user)
+
+Shared response metadata fields:
+- `fromUtc`, `toUtc`, `bucket`, `currencyCode`
+
+Response field definitions:
+- `balance-over-time`: `periodStartUtc`, `balance`
+- `income-vs-expenses`: `periodStartUtc`, `income`, `expenses`, `net`
+- `spending-by-category`: `categoryId?`, `categoryName`, `amount`
+- `category-spending-over-time`: `periodStartUtc`, `categories[]` (`categoryId?`, `categoryName`, `amount`)
+- `net-worth-over-time`: `periodStartUtc`, `netWorth`
+
+Currency behavior:
+- Responses include `currencyCode` in metadata.
+- Current default is `USD` (`Analytics:CurrencyCode` in API settings).
+
+Known limitation:
+- Transfer exclusion is pending and transfers are currently included in analytics.
+- Follow-up issue: https://github.com/SimonAdrell/budgettracker/issues/18
 
 ## Project Structure
 

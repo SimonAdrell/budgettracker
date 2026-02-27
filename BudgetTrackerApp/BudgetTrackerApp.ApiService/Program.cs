@@ -80,6 +80,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 // Register TokenService
 builder.Services.AddScoped<ITokenService, TokenService>();
 
