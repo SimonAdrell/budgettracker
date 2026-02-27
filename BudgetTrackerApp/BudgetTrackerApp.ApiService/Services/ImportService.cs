@@ -79,8 +79,26 @@ public class ImportService : IImportService
         {
             // Parse Excel file
             var lfImporter = new LFImport();
+            List<TransactionImportDto> transactions;
+            try
+            {
+                transactions = lfImporter.ImportTransactions(stream);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ServiceResponse<ImportResponse>.Invalid(
+                    Constants.ValidationErrors.ValidationError,
+                    new Dictionary<string, string[]>
+                    {
+                        { Constants.ValidationErrors.ImportErrorKey, [ex.Message] }
+                    });
+            }
 
-            var transactions = lfImporter.ImportTransactions(stream);
+            if (lfImporter.RowWarnings.Count > 0)
+            {
+                response.Warnings.AddRange(lfImporter.RowWarnings);
+                response.ErrorCount += lfImporter.RowWarnings.Count;
+            }
 
             // Validate data
             var validation = ValidateImportData(transactions);
