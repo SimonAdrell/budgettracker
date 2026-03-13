@@ -118,6 +118,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Transaction>()
             .HasIndex(t => t.TransactionDate);
 
+        builder.Entity<Transaction>()
+            .HasIndex(t => new { t.AccountId, t.TransactionDate });
+
+        builder.Entity<Transaction>()
+            .HasIndex(t => new { t.AccountId, t.CategoryId, t.TransactionDate });
+
         // Configure BalanceSnapshot entity
         builder.Entity<BalanceSnapshot>()
             .HasOne(bs => bs.Account)

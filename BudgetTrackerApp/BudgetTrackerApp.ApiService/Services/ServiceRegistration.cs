@@ -9,6 +9,7 @@ public static class ServiceRegistration
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IImportService, ImportService>();
             services.AddScoped<ISnapshotService, SnapshotService>();
+            services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<IServiceGuard, ServiceGuard>();
         }
     }

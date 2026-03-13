@@ -174,3 +174,82 @@ Invalid credentials or expired/invalid token
   "status": 401
 }
 ```
+
+## Analytics Endpoints (`/api/v1/analytics`)
+
+All analytics endpoints require `Authorization: Bearer {access-token}`.
+
+### Query Parameters
+
+- `fromUtc` (optional, ISO-8601 UTC): start of range
+- `toUtc` (optional, ISO-8601 UTC): end of range
+- `bucket` (optional): `day`, `week`, `month` (default: `month`)
+- `accountId` (optional): limit to one account the user can access
+
+Validation/defaults:
+- If both dates are omitted, range defaults to previous UTC calendar month.
+- `fromUtc` must be <= `toUtc`.
+- Boundaries are normalized to UTC and aligned to bucket starts.
+- If `accountId` is omitted, analytics aggregate all accounts accessible by the authenticated user.
+- If `accountId` is provided but not accessible, response is `403 Forbidden`.
+
+### Shared Response Metadata
+
+Each response includes:
+- `metadata.fromUtc`: normalized bucket-aligned start (UTC)
+- `metadata.toUtc`: normalized bucket-aligned exclusive end (UTC)
+- `metadata.bucket`: effective bucket (`day|week|month`)
+- `metadata.currencyCode`: configured reporting currency code (`USD` by default)
+
+### Endpoints
+
+#### `GET /api/v1/analytics/balance-over-time`
+
+Returns:
+- `points[]`
+- `points[].periodStartUtc`
+- `points[].balance` (signed)
+
+#### `GET /api/v1/analytics/income-vs-expenses`
+
+Returns:
+- `points[]`
+- `points[].periodStartUtc`
+- `points[].income` (positive magnitude)
+- `points[].expenses` (positive magnitude)
+- `points[].net` (signed: `income - expenses`)
+
+#### `GET /api/v1/analytics/spending-by-category`
+
+Returns:
+- `rows[]`
+- `rows[].categoryId` (nullable)
+- `rows[].categoryName` (`"Uncategorized"` for missing category)
+- `rows[].amount` (positive magnitude)
+
+#### `GET /api/v1/analytics/category-spending-over-time`
+
+Returns:
+- `points[]`
+- `points[].periodStartUtc`
+- `points[].categories[]`
+- `points[].categories[].categoryId` (nullable)
+- `points[].categories[].categoryName` (`"Uncategorized"` for missing category)
+- `points[].categories[].amount` (positive magnitude)
+
+#### `GET /api/v1/analytics/net-worth-over-time`
+
+Returns:
+- `points[]`
+- `points[].periodStartUtc`
+- `points[].netWorth` (signed)
+
+### Currency Behavior
+
+- Analytics are currently single-currency output (`metadata.currencyCode`).
+- Default currency is `USD` and can be changed via `Analytics:CurrencyCode` in API settings.
+
+### Known Limitation
+
+- Transfers are currently included in analytics aggregates.
+- Follow-up issue: https://github.com/SimonAdrell/budgettracker/issues/18
