@@ -4,6 +4,14 @@
 
 BudgetTracker is an Aspire-based application with ASP.NET Core Identity integration for user authentication and management.
 
+## Product UI Scope
+
+This repository currently contains two frontend projects:
+
+- `BudgetTrackerApp/frontend` is the primary MVP UI and the default product surface for agent work.
+- `BudgetTrackerApp.Web` exists as a secondary Blazor frontend and is out of scope unless a task explicitly requests it.
+- For MVP product work, target the React app in `BudgetTrackerApp/frontend` rather than splitting work across both frontends.
+
 ## Features
 
 - **ASP.NET Core Identity** for user authentication
@@ -54,7 +62,7 @@ BudgetTracker is an Aspire-based application with ASP.NET Core Identity integrat
    - The console will display URLs for:
      - **Aspire Dashboard**: `http://localhost:15xxx` (port varies)
      - **API Service**: Check dashboard for the assigned port
-     - **Web Frontend**: Check dashboard for the assigned port
+     - **Frontend resources**: Check dashboard for the assigned ports for the React MVP UI (`BudgetTrackerApp/frontend`) and the secondary Blazor UI (`BudgetTrackerApp.Web`)
    
    Example output:
    ```
@@ -73,7 +81,7 @@ BudgetTracker is an Aspire-based application with ASP.NET Core Identity integrat
    - Database `identitydb` is created automatically
    - Entity Framework migrations run automatically
    - API service starts and connects to PostgreSQL
-   - Web frontend starts
+   - Frontend resources start, including the React MVP UI and the secondary Blazor UI
 
 ### Verifying the Setup
 
@@ -82,7 +90,7 @@ BudgetTracker is an Aspire-based application with ASP.NET Core Identity integrat
    - `postgres` - PostgreSQL container
    - `identitydb` - Database
    - `apiservice` - API service
-   - `webfrontend` - Web frontend
+   - frontend resources, including the React MVP UI and the Blazor frontend, as configured by AppHost
 
 3. Test the API:
    ```bash
@@ -114,14 +122,14 @@ For detailed information about the Identity integration, authentication endpoint
 
 - **BudgetTrackerApp.AppHost** - Aspire orchestration
 - **BudgetTrackerApp.ApiService** - Backend API with Identity
-- **BudgetTrackerApp.Web** - Blazor frontend
-- **BudgetTrackerApp.frontend** - React SPA frontend with authentication ([See React README](BudgetTrackerApp/frontend/REACT_README.md))
+- **BudgetTrackerApp/frontend** - Primary React MVP frontend and default product UI target ([See React README](BudgetTrackerApp/frontend/REACT_README.md))
+- **BudgetTrackerApp.Web** - Secondary Blazor frontend that remains out of scope unless explicitly requested
 - **BudgetTrackerApp.ServiceDefaults** - Shared Aspire configuration
 - **BudgetTrackerApp.Tests** - Integration tests
 
 ## Running the React Frontend
 
-A React-based frontend with authentication is available in the `BudgetTrackerApp/frontend` directory.
+`BudgetTrackerApp/frontend` is the primary MVP product UI in this repository. Use it as the default frontend target for product work unless a task explicitly calls for `BudgetTrackerApp.Web`.
 
 ### Quick Start
 
