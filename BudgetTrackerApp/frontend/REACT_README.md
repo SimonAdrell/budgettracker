@@ -26,7 +26,7 @@ npm install
 
 ### 2. Configure API URL
 
-The application uses environment variables to configure the API URL. By default, it points to `http://localhost:5000`.
+The application uses the backend's `/api` route prefix. By default, it uses the same origin and sends requests to `/api`.
 
 To override this, create a `.env.local` file:
 
@@ -35,7 +35,14 @@ To override this, create a `.env.local` file:
 VITE_API_URL=http://localhost:<your-api-port>
 ```
 
-**Note**: When running with Aspire, check the Aspire dashboard for the actual API service port.
+The shared API client normalizes both of these forms to a base URL ending in `/api`:
+
+```bash
+VITE_API_URL=http://localhost:<your-api-port>
+VITE_API_BASE_URL=http://localhost:<your-api-port>/api
+```
+
+**Note**: When running with Aspire, check the Aspire dashboard for the actual API service port. During the transition to the shared client, the Vite dev proxy also supports existing legacy service calls to `/api/api/...`.
 
 ### 3. Run the Development Server
 
@@ -133,7 +140,8 @@ frontend/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API base URL | `http://localhost:5000` |
+| `VITE_API_URL` | Backend API origin; normalized to end with `/api` | same-origin `/api` |
+| `VITE_API_BASE_URL` | Full backend API base URL | same-origin `/api` |
 
 ## Development
 
@@ -208,6 +216,7 @@ If you see CORS errors in the browser console:
 2. Verify PostgreSQL container is running via Aspire dashboard
 3. Check the browser console for the actual API URL being used
 4. Ensure no firewall is blocking the connection
+5. If you are testing an older service that still calls `/api/api/...`, use the Vite dev server so the temporary compatibility proxy can rewrite it to `/api/...`
 
 ## Next Steps
 
