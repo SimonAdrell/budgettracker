@@ -72,6 +72,84 @@ public class IdentityTests
     }
 
     [Fact]
+    public async Task CanLoginAndCreateAccount()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.BudgetTrackerApp_AppHost>(cancellationToken);
+        appHost.Services.AddLogging(logging =>
+        {
+            logging.SetMinimumLevel(LogLevel.Debug);
+            logging.AddFilter(appHost.Environment.ApplicationName, LogLevel.Debug);
+            logging.AddFilter("Aspire.", LogLevel.Debug);
+        });
+        appHost.Services.ConfigureHttpClientDefaults(clientBuilder =>
+        {
+            clientBuilder.AddStandardResilienceHandler();
+        });
+
+        await using var app = await appHost.BuildAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+        await app.StartAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+
+        var httpClient = app.CreateHttpClient("apiservice");
+        await app.ResourceNotifications.WaitForResourceHealthyAsync("apiservice", cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+
+        var testEmail = $"test_{Guid.NewGuid()}@example.com";
+        var testPassword = "Test123!";
+
+        var registerRequest = new RegisterRequest
+        {
+            Email = testEmail,
+            Password = testPassword,
+            ConfirmPassword = testPassword,
+            FirstName = "Test",
+            LastName = "User"
+        };
+
+        var registerResponse = await httpClient.PostAsJsonAsync("/api/auth/register", registerRequest, cancellationToken);
+        Assert.True(registerResponse.IsSuccessStatusCode, $"Registration failed: {await registerResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        // Act - Login
+        var loginRequest = new LoginRequest
+        {
+            Email = testEmail,
+            Password = testPassword
+        };
+
+        var loginResponse = await httpClient.PostAsJsonAsync("/api/auth/login", loginRequest, cancellationToken);
+
+        // Assert - Login
+        Assert.True(loginResponse.IsSuccessStatusCode, $"Login failed: {await loginResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
+        Assert.NotNull(authResponse);
+        Assert.NotEmpty(authResponse.Token);
+        Assert.NotEmpty(authResponse.RefreshToken);
+        Assert.Equal(testEmail, authResponse.Email);
+
+        httpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+        // Act - Create account
+        var createAccountRequest = new CreateAccountRequest
+        {
+            Name = "Smoke Test Account",
+            AccountNumber = "SMOKE-1234"
+        };
+
+        var createAccountResponse = await httpClient.PostAsJsonAsync("/api/accounts", createAccountRequest, cancellationToken);
+
+        // Assert - Account creation
+        Assert.True(createAccountResponse.IsSuccessStatusCode, $"Account creation failed: {await createAccountResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var createdAccount = await createAccountResponse.Content.ReadFromJsonAsync<AccountDto>(cancellationToken);
+        Assert.NotNull(createdAccount);
+        Assert.True(createdAccount.Id > 0);
+        Assert.Equal("Smoke Test Account", createdAccount.Name);
+    }
+
+    [Fact]
     public async Task CanAccessProtectedEndpointWithValidToken()
     {
         // Arrange
