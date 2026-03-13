@@ -1,8 +1,8 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 
 const authService = {
   login: async (email, password) => {
-    const response = await axios.post(`/api/api/auth/login`, {
+    const response = await apiClient.post('/auth/login', {
       email,
       password,
     });
@@ -26,7 +26,7 @@ const authService = {
 
     if (token) {
       try {
-        await axios.post(`/api/api/auth/logout`, {}, {
+        await apiClient.post('/auth/logout', {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (error) {
