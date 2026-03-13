@@ -59,9 +59,11 @@ public class AnalyticsServiceTests : IDisposable
         };
 
         var response = await _service.GetIncomeVsExpensesAsync(_userId, request, TestContext.Current.CancellationToken);
+        Assert.Equal(ServiceResponseType.Success, response.ResponseType);
+        Assert.NotNull(response.Data);
 
-        Assert.Equal(3, response.Points.Count);
-        Assert.All(response.Points, p =>
+        Assert.Equal(3, response.Data.Points.Count);
+        Assert.All(response.Data.Points, p =>
         {
             Assert.Equal(0m, p.Income);
             Assert.Equal(0m, p.Expenses);
@@ -104,14 +106,20 @@ public class AnalyticsServiceTests : IDisposable
         var incomeResponse = await _service.GetIncomeVsExpensesAsync(_userId, request, TestContext.Current.CancellationToken);
         var spendingResponse = await _service.GetSpendingByCategoryAsync(_userId, request, TestContext.Current.CancellationToken);
         var netWorthResponse = await _service.GetNetWorthOverTimeAsync(_userId, request, TestContext.Current.CancellationToken);
+        Assert.Equal(ServiceResponseType.Success, incomeResponse.ResponseType);
+        Assert.Equal(ServiceResponseType.Success, spendingResponse.ResponseType);
+        Assert.Equal(ServiceResponseType.Success, netWorthResponse.ResponseType);
+        Assert.NotNull(incomeResponse.Data);
+        Assert.NotNull(spendingResponse.Data);
+        Assert.NotNull(netWorthResponse.Data);
 
-        var point = Assert.Single(incomeResponse.Points);
+        var point = Assert.Single(incomeResponse.Data.Points);
         Assert.Equal(200m, point.Income);
         Assert.Equal(50m, point.Expenses);
         Assert.Equal(150m, point.Net);
 
-        Assert.Equal(50m, Assert.Single(spendingResponse.Rows).Amount);
-        Assert.Equal(1150m, Assert.Single(netWorthResponse.Points).NetWorth);
+        Assert.Equal(50m, Assert.Single(spendingResponse.Data.Rows).Amount);
+        Assert.Equal(1150m, Assert.Single(netWorthResponse.Data.Points).NetWorth);
     }
 
     [Fact]
@@ -153,15 +161,17 @@ public class AnalyticsServiceTests : IDisposable
         };
 
         var response = await _service.GetSpendingByCategoryAsync(_userId, request, TestContext.Current.CancellationToken);
+        Assert.Equal(ServiceResponseType.Success, response.ResponseType);
+        Assert.NotNull(response.Data);
 
-        Assert.Equal(2, response.Rows.Count);
-        var uncategorized = Assert.Single(response.Rows, r => r.CategoryName == "Uncategorized");
+        Assert.Equal(2, response.Data.Rows.Count);
+        var uncategorized = Assert.Single(response.Data.Rows, r => r.CategoryName == "Uncategorized");
         Assert.Null(uncategorized.CategoryId);
         Assert.Equal(30m, uncategorized.Amount);
     }
 
     [Fact]
-    public void NormalizeQuery_WhenRawFromIsAfterRawTo_ThrowsArgumentException()
+    public async Task GetIncomeVsExpenses_WhenRawFromIsAfterRawTo_ReturnsInvalid()
     {
         var request = new AnalyticsQueryRequest
         {
@@ -171,7 +181,10 @@ public class AnalyticsServiceTests : IDisposable
             AccountId = _accountId
         };
 
-        var ex = Assert.Throws<ArgumentException>(() => _service.NormalizeQuery(request));
-        Assert.Contains("fromUtc must be before or equal to toUtc", ex.Message);
+        var response = await _service.GetIncomeVsExpensesAsync(_userId, request, TestContext.Current.CancellationToken);
+        Assert.Equal(ServiceResponseType.Invalid, response.ResponseType);
+        Assert.NotNull(response.Extensions);
+        Assert.True(response.Extensions.TryGetValue("query", out var queryErrors));
+        Assert.Contains("fromUtc must be before or equal to toUtc", queryErrors);
     }
 }

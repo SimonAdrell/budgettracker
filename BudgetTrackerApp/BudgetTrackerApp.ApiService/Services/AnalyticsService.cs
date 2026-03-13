@@ -6,12 +6,11 @@ namespace BudgetTrackerApp.ApiService.Services;
 
 public interface IAnalyticsService
 {
-    AnalyticsQueryContext NormalizeQuery(AnalyticsQueryRequest request);
-    Task<BalanceOverTimeResponse> GetBalanceOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
-    Task<IncomeVsExpensesResponse> GetIncomeVsExpensesAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
-    Task<SpendingByCategoryResponse> GetSpendingByCategoryAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
-    Task<CategorySpendingOverTimeResponse> GetCategorySpendingOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
-    Task<NetWorthOverTimeResponse> GetNetWorthOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
+    Task<ServiceResponse<BalanceOverTimeResponse>> GetBalanceOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
+    Task<ServiceResponse<IncomeVsExpensesResponse>> GetIncomeVsExpensesAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
+    Task<ServiceResponse<SpendingByCategoryResponse>> GetSpendingByCategoryAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
+    Task<ServiceResponse<CategorySpendingOverTimeResponse>> GetCategorySpendingOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
+    Task<ServiceResponse<NetWorthOverTimeResponse>> GetNetWorthOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken);
 }
 
 public sealed record AnalyticsQueryContext(
@@ -26,8 +25,9 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
 {
     private const string UncategorizedName = "Uncategorized";
     private readonly string _currencyCode = configuration["Analytics:CurrencyCode"] ?? "USD";
+    private const string InvalidQueryMessage = "Invalid analytics query";
 
-    public AnalyticsQueryContext NormalizeQuery(AnalyticsQueryRequest request)
+    private static AnalyticsQueryContext NormalizeQuery(AnalyticsQueryRequest request)
     {
         var bucket = (request.Bucket ?? "month").Trim().ToLowerInvariant();
         if (bucket is not ("day" or "week" or "month"))
@@ -85,44 +85,58 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
             request.AccountId);
     }
 
-    public async Task<BalanceOverTimeResponse> GetBalanceOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResponse<BalanceOverTimeResponse>> GetBalanceOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
     {
-        var query = NormalizeQuery(request);
+        if (!TryNormalizeQuery(request, out var query, out var validationMessage))
+        {
+            return InvalidQueryResponse<BalanceOverTimeResponse>(validationMessage);
+        }
+
         var metadata = BuildMetadata(query);
         var bucketStarts = BuildBuckets(query.FromUtc, query.ToUtc, query.Bucket);
         var accountIds = await GetScopedAccountIdsAsync(userId, query.AccountId, cancellationToken);
+        if (query.AccountId.HasValue && accountIds.Count == 0)
+        {
+            return ServiceResponse<BalanceOverTimeResponse>.Forbid("You do not have access to this account");
+        }
 
         if (accountIds.Count == 0)
         {
-            return new BalanceOverTimeResponse(metadata, bucketStarts.Select(d => new BalanceOverTimePoint(d, 0m)).ToList());
+            return ServiceResponse<BalanceOverTimeResponse>.Success(
+                new BalanceOverTimeResponse(metadata, bucketStarts.Select(d => new BalanceOverTimePoint(d, 0m)).ToList()));
         }
 
         var maxDate = query.ToDateInclusive;
-        var balances = await context.Transactions
+        var balanceProjections = await context.Transactions
             .AsNoTracking()
             .Where(t => accountIds.Contains(t.AccountId) && t.TransactionDate <= maxDate)
             .OrderBy(t => t.AccountId)
             .ThenBy(t => t.TransactionDate)
             .ThenBy(t => t.Id)
-            .ToListAsync(cancellationToken);
-
-        var balanceProjections = balances
             .Select(t => new AccountBalanceProjection(t.AccountId, t.TransactionDate, t.Balance))
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         var points = BuildBalancePoints(bucketStarts, query.Bucket, accountIds, balanceProjections)
             .Select(x => new BalanceOverTimePoint(x.PeriodStartUtc, x.Balance))
             .ToList();
 
-        return new BalanceOverTimeResponse(metadata, points);
+        return ServiceResponse<BalanceOverTimeResponse>.Success(new BalanceOverTimeResponse(metadata, points));
     }
 
-    public async Task<IncomeVsExpensesResponse> GetIncomeVsExpensesAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResponse<IncomeVsExpensesResponse>> GetIncomeVsExpensesAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
     {
-        var query = NormalizeQuery(request);
+        if (!TryNormalizeQuery(request, out var query, out var validationMessage))
+        {
+            return InvalidQueryResponse<IncomeVsExpensesResponse>(validationMessage);
+        }
+
         var metadata = BuildMetadata(query);
         var bucketStarts = BuildBuckets(query.FromUtc, query.ToUtc, query.Bucket);
         var accountIds = await GetScopedAccountIdsAsync(userId, query.AccountId, cancellationToken);
+        if (query.AccountId.HasValue && accountIds.Count == 0)
+        {
+            return ServiceResponse<IncomeVsExpensesResponse>.Forbid("You do not have access to this account");
+        }
 
         var results = bucketStarts.ToDictionary(
             keySelector: s => s,
@@ -167,17 +181,26 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
             })
             .ToList();
 
-        return new IncomeVsExpensesResponse(metadata, points);
+        return ServiceResponse<IncomeVsExpensesResponse>.Success(new IncomeVsExpensesResponse(metadata, points));
     }
 
-    public async Task<SpendingByCategoryResponse> GetSpendingByCategoryAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResponse<SpendingByCategoryResponse>> GetSpendingByCategoryAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
     {
-        var query = NormalizeQuery(request);
+        if (!TryNormalizeQuery(request, out var query, out var validationMessage))
+        {
+            return InvalidQueryResponse<SpendingByCategoryResponse>(validationMessage);
+        }
+
         var metadata = BuildMetadata(query);
         var accountIds = await GetScopedAccountIdsAsync(userId, query.AccountId, cancellationToken);
+        if (query.AccountId.HasValue && accountIds.Count == 0)
+        {
+            return ServiceResponse<SpendingByCategoryResponse>.Forbid("You do not have access to this account");
+        }
+
         if (accountIds.Count == 0)
         {
-            return new SpendingByCategoryResponse(metadata, []);
+            return ServiceResponse<SpendingByCategoryResponse>.Success(new SpendingByCategoryResponse(metadata, []));
         }
 
         var rows = await context.Transactions
@@ -200,15 +223,23 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
             .OrderByDescending(r => r.Amount)
             .ToList();
 
-        return new SpendingByCategoryResponse(metadata, groupedRows);
+        return ServiceResponse<SpendingByCategoryResponse>.Success(new SpendingByCategoryResponse(metadata, groupedRows));
     }
 
-    public async Task<CategorySpendingOverTimeResponse> GetCategorySpendingOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResponse<CategorySpendingOverTimeResponse>> GetCategorySpendingOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
     {
-        var query = NormalizeQuery(request);
+        if (!TryNormalizeQuery(request, out var query, out var validationMessage))
+        {
+            return InvalidQueryResponse<CategorySpendingOverTimeResponse>(validationMessage);
+        }
+
         var metadata = BuildMetadata(query);
         var bucketStarts = BuildBuckets(query.FromUtc, query.ToUtc, query.Bucket);
         var accountIds = await GetScopedAccountIdsAsync(userId, query.AccountId, cancellationToken);
+        if (query.AccountId.HasValue && accountIds.Count == 0)
+        {
+            return ServiceResponse<CategorySpendingOverTimeResponse>.Forbid("You do not have access to this account");
+        }
 
         var map = bucketStarts.ToDictionary(s => s, _ => new Dictionary<(int?, string), decimal>());
         if (accountIds.Count > 0)
@@ -254,16 +285,21 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
             })
             .ToList();
 
-        return new CategorySpendingOverTimeResponse(metadata, points);
+        return ServiceResponse<CategorySpendingOverTimeResponse>.Success(new CategorySpendingOverTimeResponse(metadata, points));
     }
 
-    public async Task<NetWorthOverTimeResponse> GetNetWorthOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
+    public async Task<ServiceResponse<NetWorthOverTimeResponse>> GetNetWorthOverTimeAsync(string userId, AnalyticsQueryRequest request, CancellationToken cancellationToken)
     {
         var balance = await GetBalanceOverTimeAsync(userId, request, cancellationToken);
-        var points = balance.Points
+        if (balance.ResponseType != ServiceResponseType.Success || balance.Data is null)
+        {
+            return FromNonSuccess<BalanceOverTimeResponse, NetWorthOverTimeResponse>(balance);
+        }
+
+        var points = balance.Data.Points
             .Select(p => new NetWorthOverTimePoint(p.PeriodStartUtc, p.Balance))
             .ToList();
-        return new NetWorthOverTimeResponse(balance.Metadata, points);
+        return ServiceResponse<NetWorthOverTimeResponse>.Success(new NetWorthOverTimeResponse(balance.Data.Metadata, points));
     }
 
     private AnalyticsResponseMetadata BuildMetadata(AnalyticsQueryContext context)
@@ -383,4 +419,38 @@ public class AnalyticsService(ApplicationDbContext context, IConfiguration confi
     private sealed record AccountBalanceProjection(int AccountId, DateOnly TransactionDate, decimal Balance);
     private sealed record BalancePointProjection(DateTime PeriodStartUtc, decimal Balance);
     private sealed record IncomeAgg(decimal Income, decimal Expenses);
+
+    private static bool TryNormalizeQuery(AnalyticsQueryRequest request, out AnalyticsQueryContext context, out string validationMessage)
+    {
+        try
+        {
+            context = NormalizeQuery(request);
+            validationMessage = string.Empty;
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            context = null!;
+            validationMessage = ex.Message;
+            return false;
+        }
+    }
+
+    private static ServiceResponse<T> InvalidQueryResponse<T>(string message)
+    {
+        return ServiceResponse<T>.Invalid(InvalidQueryMessage, new Dictionary<string, string[]>
+        {
+            { "query", [message] }
+        });
+    }
+
+    private static ServiceResponse<TTarget> FromNonSuccess<TSource, TTarget>(ServiceResponse<TSource> source)
+    {
+        return new ServiceResponse<TTarget>
+        {
+            Message = source.Message,
+            Extensions = source.Extensions,
+            ResponseType = source.ResponseType
+        };
+    }
 }
