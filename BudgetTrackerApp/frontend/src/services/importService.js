@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 import authService from './authService';
 
 const importService = {
@@ -8,7 +8,7 @@ const importService = {
     formData.append('file', file);
     formData.append('accountId', accountId);
 
-    const response = await axios.post(`/api/api/import/upload`, formData, {
+    const response = await apiClient.post('/import/upload', formData, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
