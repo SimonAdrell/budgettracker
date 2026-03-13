@@ -80,19 +80,21 @@ Purpose: add categories, a better dashboard, and richer reporting only after the
    Success: one expired access token can refresh and retry once.
 22. Add logout fallback on refresh failure.
    Success: failed refresh clears auth state cleanly.
-23. Add duplicate/validation regression tests for import.
+23. Remove temporary legacy `/api/api` compatibility support from the React frontend.
+   Success: `BudgetTrackerApp/frontend/vite.config.js`, `frontend/src/services/apiClient.js`, and frontend docs no longer rely on or describe the temporary `/api/api/*` compatibility path, and the React app still builds.
+24. Add duplicate/validation regression tests for import.
    Success: duplicate skipping and invalid inputs are automatically checked.
-24. Add a snapshot-range regression test.
+25. Add a snapshot-range regression test.
    Success: desired narrower regeneration behavior is defined in tests.
-25. Narrow snapshot regeneration scope after import.
+26. Narrow snapshot regeneration scope after import.
    Success: only the affected range is regenerated unless a full rebuild is required.
 
 ### Post-MVP Queue
 
-26. Add a category list endpoint.
-27. Add a category create endpoint.
-28. Add a dashboard page shell in the React app.
-29. Render account summary data on the dashboard page.
+27. Add a category list endpoint.
+28. Add a category create endpoint.
+29. Add a dashboard page shell in the React app.
+30. Render account summary data on the dashboard page.
 
 ## Recommended Immediate Order
 
