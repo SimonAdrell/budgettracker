@@ -17,9 +17,7 @@ const configuredBaseUrl =
   import.meta.env.VITE_API_URL ??
   '';
 
-// Default to the backend's real route prefix. The Vite dev proxy now keeps
-// `/api` requests intact and includes a temporary compatibility rule for the
-// legacy `/api/api/*` service calls until those services migrate here.
+// Default to the backend's real route prefix.
 export const apiBaseUrl =
   normalizeConfiguredBaseUrl(configuredBaseUrl) || '/api';
 
