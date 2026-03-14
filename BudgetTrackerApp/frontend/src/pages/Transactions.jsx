@@ -11,10 +11,13 @@ const numberFormatter = new Intl.NumberFormat(undefined, {
 function Transactions() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [accountsError, setAccountsError] = useState('');
+  const [summaryError, setSummaryError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
 
   const loadAccounts = async () => {
@@ -35,6 +38,7 @@ function Transactions() {
 
         return accountsData[0]?.id.toString() || '';
       });
+      setSummary(null);
       setTransactions([]);
     } catch (err) {
       setAccountsError(err.response?.data?.detail || 'Failed to load accounts. Please try again.');
@@ -69,6 +73,7 @@ function Transactions() {
   };
 
   useEffect(() => {
+    loadSummary(selectedAccountId);
     loadTransactions(selectedAccountId);
   }, [selectedAccountId]);
 
@@ -88,6 +93,39 @@ function Transactions() {
     }
 
     return numberFormatter.format(amount);
+  };
+
+  const loadSummary = async (accountId) => {
+    if (!accountId) {
+      setSummary(null);
+      setSummaryError('');
+      return;
+    }
+
+    setLoadingSummary(true);
+    setSummaryError('');
+
+    try {
+      const summaryData = await transactionService.getSummaryForAccount(accountId);
+      setSummary(summaryData);
+    } catch (err) {
+      setSummary(null);
+      setSummaryError(err.response?.data?.detail || 'Failed to load account summary. Please try again.');
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  const getBalanceClassName = (amount) => {
+    if (amount < 0) {
+      return 'amount-negative';
+    }
+
+    if (amount > 0) {
+      return 'amount-positive';
+    }
+
+    return 'transactions-summary-value-neutral';
   };
 
   return (
@@ -129,7 +167,7 @@ function Transactions() {
                   id="transactions-account-select"
                   value={selectedAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
-                  disabled={loadingTransactions}
+                  disabled={loadingSummary || loadingTransactions}
                 >
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -139,6 +177,67 @@ function Transactions() {
                 </select>
               </div>
             </div>
+
+            {loadingSummary && (
+              <div className="transactions-state transactions-state-loading">
+                Loading summary...
+              </div>
+            )}
+
+            {!loadingSummary && summaryError && (
+              <div className="transactions-state transactions-state-error">
+                <strong>{summaryError}</strong>
+                <button
+                  type="button"
+                  className="transactions-retry"
+                  onClick={() => loadSummary(selectedAccountId)}
+                >
+                  Refresh Summary
+                </button>
+              </div>
+            )}
+
+            {!loadingSummary && !summaryError && summary && (
+              <section className="transactions-summary-card" aria-label="Account summary">
+                <div className="transactions-summary-header">
+                  <h2>Account Summary</h2>
+                  <p>
+                    {selectedAccount
+                      ? `${selectedAccount.name} at a glance`
+                      : 'Current summary for the selected account.'}
+                  </p>
+                </div>
+
+                <div className="transactions-summary-grid">
+                  <div className="transactions-summary-item">
+                    <span className="transactions-summary-label">Current Balance</span>
+                    <strong className={`transactions-summary-value ${getBalanceClassName(summary.currentBalance)}`}>
+                      {formatAmount(summary.currentBalance)}
+                    </strong>
+                  </div>
+
+                  <div className="transactions-summary-item">
+                    <span className="transactions-summary-label">Last Updated</span>
+                    <strong className="transactions-summary-value">
+                      {formatDate(summary.lastUpdatedDate)}
+                    </strong>
+                  </div>
+
+                  <div className="transactions-summary-item">
+                    <span className="transactions-summary-label">Transaction Count</span>
+                    <strong className="transactions-summary-value">
+                      {summary.transactionCount ?? 0}
+                    </strong>
+                  </div>
+                </div>
+
+                {summary.transactionCount === 0 && (
+                  <p className="transactions-summary-empty">
+                    No summary data is available for this account yet because no transactions have been imported.
+                  </p>
+                )}
+              </section>
+            )}
 
             {loadingTransactions && (
               <div className="transactions-state transactions-state-loading">
