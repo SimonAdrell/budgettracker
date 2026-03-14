@@ -1,0 +1,32 @@
+.success-message {
+  background: #eefbf3;
+  color: #1f7a43;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.form-help-text {
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #666;
+  text-align: center;
+}
+
+.auth-secondary-action {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.auth-secondary-action a {
+  color: #667eea;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-secondary-action a:hover {
+  text-decoration: underline;
+}
