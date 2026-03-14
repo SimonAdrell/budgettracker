@@ -56,6 +56,12 @@ const persistAuthData = (authData) => {
   }));
 };
 
+const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+};
+
 const refreshAccessToken = async () => {
   const token = localStorage.getItem('token');
   const refreshToken = localStorage.getItem('refreshToken');
@@ -102,6 +108,7 @@ apiClient.interceptors.response.use(
 
       return apiClient(originalRequest);
     } catch (refreshError) {
+      clearAuthData();
       return Promise.reject(refreshError);
     }
   }
