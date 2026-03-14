@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import './Login.css';
 
@@ -59,6 +59,13 @@ function Login() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        <div className="auth-secondary-action">
+          Need an account?{' '}
+          <Link to="/register" onClick={(e) => loading && e.preventDefault()}>
+            Create one
+          </Link>
+          .
+        </div>
       </div>
     </div>
   );
