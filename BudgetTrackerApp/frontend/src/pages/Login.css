@@ -77,3 +77,20 @@ button[type="submit"]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.auth-secondary-action {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.auth-secondary-action a {
+  color: #667eea;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-secondary-action a:hover {
+  text-decoration: underline;
+}
