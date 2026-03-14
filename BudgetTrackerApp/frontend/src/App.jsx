@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import UserInfo from './pages/UserInfo';
 import Import from './pages/Import';
+import Transactions from './pages/Transactions';
 import authService from './services/authService';
 import './App.css';
 
@@ -27,6 +28,16 @@ function App() {
           element={
             authService.isAuthenticated() ? (
               <Import />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            authService.isAuthenticated() ? (
+              <Transactions />
             ) : (
               <Navigate to="/login" replace />
             )
