@@ -159,6 +159,98 @@ public class ImportTests
             cancellationToken);
     }
 
+    [Fact]
+    public async Task CannotImportWithUnsupportedFileExtension()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = await CreateStartedAppSessionAsync(cancellationToken);
+        var httpClient = session.HttpClient;
+
+        await AuthenticateAsync(httpClient, cancellationToken);
+        var account = await CreateAccountAsync(httpClient, cancellationToken, "Extension Test Account", "EXT-001");
+
+        var workbook = CreateLfWorkbookBytes(
+            new ImportRow("2024-02-01", "2024-02-01", "Salary", "1000.00", "5000.00"));
+
+        using var formData = CreateImportFormData(workbook, "invalid-extension.txt", account.Id.ToString());
+        var importResponse = await httpClient.PostAsync("/api/import/upload", formData, cancellationToken);
+
+        await AssertValidationProblemDetailsAsync(
+            importResponse,
+            expectedErrorKey: "ImportError",
+            expectedErrorMessage: "Only Excel files (.xls, .xlsx) are supported",
+            cancellationToken);
+    }
+
+    [Fact]
+    public async Task CannotImportWhenWorkbookContainsNoTransactions()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = await CreateStartedAppSessionAsync(cancellationToken);
+        var httpClient = session.HttpClient;
+
+        await AuthenticateAsync(httpClient, cancellationToken);
+        var account = await CreateAccountAsync(httpClient, cancellationToken, "Empty Workbook Account", "EMP-001");
+
+        var workbook = CreateLfWorkbookBytes();
+
+        using var formData = CreateImportFormData(workbook, "empty-workbook.xlsx", account.Id.ToString());
+        var importResponse = await httpClient.PostAsync("/api/import/upload", formData, cancellationToken);
+
+        await AssertValidationProblemDetailsAsync(
+            importResponse,
+            expectedErrorKey: "ImportError",
+            expectedErrorMessage: "No transactions found in the file",
+            cancellationToken);
+    }
+
+    [Fact]
+    public async Task ImportDoesNotTreatDifferentBookingDateAsDuplicate()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = await CreateStartedAppSessionAsync(cancellationToken);
+        var httpClient = session.HttpClient;
+
+        await AuthenticateAsync(httpClient, cancellationToken);
+        var account = await CreateAccountAsync(httpClient, cancellationToken, "Distinct Booking Date Account", "BOOK-001");
+
+        var initialWorkbook = CreateLfWorkbookBytes(
+            new ImportRow("2024-01-15", "2024-01-14", "Coffee Shop", "-45.67", "1000.00"));
+
+        using var initialImportContent = CreateImportFormData(initialWorkbook, "initial-import.xlsx", account.Id.ToString());
+        var initialImportResponse = await httpClient.PostAsync("/api/import/upload", initialImportContent, cancellationToken);
+        Assert.True(
+            initialImportResponse.IsSuccessStatusCode,
+            $"Initial import failed: {await initialImportResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var secondWorkbook = CreateLfWorkbookBytes(
+            new ImportRow("2024-01-16", "2024-01-10", "Coffee Shop", "-45.67", "954.33"));
+
+        using var secondImportContent = CreateImportFormData(secondWorkbook, "second-import.xlsx", account.Id.ToString());
+        var secondImportResponse = await httpClient.PostAsync("/api/import/upload", secondImportContent, cancellationToken);
+        Assert.True(
+            secondImportResponse.IsSuccessStatusCode,
+            $"Second import failed: {await secondImportResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var secondImportResult = await secondImportResponse.Content.ReadFromJsonAsync<ImportResponse>(cancellationToken);
+        Assert.NotNull(secondImportResult);
+        Assert.True(secondImportResult.Success);
+        Assert.Equal(1, secondImportResult.ImportedCount);
+        Assert.Equal(0, secondImportResult.DuplicateCount);
+        Assert.Empty(secondImportResult.Warnings);
+
+        var transactionsResponse = await httpClient.GetAsync($"/api/transactions/{account.Id}", cancellationToken);
+        Assert.True(
+            transactionsResponse.IsSuccessStatusCode,
+            $"Transaction read failed: {await transactionsResponse.Content.ReadAsStringAsync(cancellationToken)}");
+
+        var transactions = await transactionsResponse.Content.ReadFromJsonAsync<List<TransactionListItemDto>>(cancellationToken);
+        Assert.NotNull(transactions);
+        Assert.Equal(2, transactions.Count);
+        Assert.Contains(transactions, transaction => transaction.BookingDate == DateOnly.Parse("2024-01-15"));
+        Assert.Contains(transactions, transaction => transaction.BookingDate == DateOnly.Parse("2024-01-16"));
+    }
+
     private static async Task<TestAppSession> CreateStartedAppSessionAsync(CancellationToken cancellationToken)
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.BudgetTrackerApp_AppHost>(cancellationToken);
