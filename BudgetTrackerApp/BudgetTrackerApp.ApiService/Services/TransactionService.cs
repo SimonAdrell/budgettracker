@@ -7,6 +7,7 @@ namespace BudgetTrackerApp.ApiService.Services;
 public interface ITransactionService
 {
     Task<ServiceResponse<List<TransactionListItemDto>>> GetAccountTransactionsAsync(int accountId, CancellationToken cancellationToken);
+    Task<ServiceResponse<AccountSummaryDto>> GetAccountSummaryAsync(int accountId, CancellationToken cancellationToken);
 }
 
 public class TransactionService(
@@ -36,5 +37,37 @@ public class TransactionService(
             .ToListAsync(cancellationToken);
 
         return ServiceResponse<List<TransactionListItemDto>>.Success(transactions);
+    }
+
+    public async Task<ServiceResponse<AccountSummaryDto>> GetAccountSummaryAsync(int accountId, CancellationToken cancellationToken)
+    {
+        if (!await serviceGuard.UserHasAccessToAccount(accountId))
+        {
+            return ServiceResponse<AccountSummaryDto>.Unauthorized("You do not have access to this account");
+        }
+
+        var latestTransaction = await context.Transactions
+            .AsNoTracking()
+            .Where(t => t.AccountId == accountId)
+            .OrderByDescending(t => t.TransactionDate)
+            .ThenByDescending(t => t.BookingDate)
+            .ThenByDescending(t => t.Id)
+            .Select(t => new
+            {
+                t.Balance,
+                t.TransactionDate
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var transactionCount = await context.Transactions
+            .AsNoTracking()
+            .CountAsync(t => t.AccountId == accountId, cancellationToken);
+
+        var summary = new AccountSummaryDto(
+            CurrentBalance: latestTransaction?.Balance ?? 0m,
+            LastUpdatedDate: latestTransaction?.TransactionDate,
+            TransactionCount: transactionCount);
+
+        return ServiceResponse<AccountSummaryDto>.Success(summary);
     }
 }
