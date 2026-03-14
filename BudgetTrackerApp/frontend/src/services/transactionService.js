@@ -10,6 +10,15 @@ const transactionService = {
 
     return response.data;
   },
+
+  getSummaryForAccount: async (accountId) => {
+    const token = authService.getToken();
+    const response = await apiClient.get(`/transactions/${accountId}/summary`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return response.data;
+  },
 };
 
 export default transactionService;

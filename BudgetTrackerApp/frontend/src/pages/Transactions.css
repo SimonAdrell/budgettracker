@@ -29,6 +29,67 @@
   margin-bottom: 24px;
 }
 
+.transactions-summary-card {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.transactions-summary-header {
+  margin-bottom: 16px;
+}
+
+.transactions-summary-header h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  color: #333;
+}
+
+.transactions-summary-header p {
+  margin: 0;
+  color: #666;
+}
+
+.transactions-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.transactions-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 6px;
+  background-color: white;
+}
+
+.transactions-summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6c757d;
+}
+
+.transactions-summary-value {
+  font-size: 24px;
+  color: #333;
+}
+
+.transactions-summary-value-neutral {
+  color: #333;
+}
+
+.transactions-summary-empty {
+  margin: 16px 0 0;
+  color: #666;
+  line-height: 1.5;
+}
+
 .transactions-form-group label {
   display: block;
   margin-bottom: 8px;
