@@ -18,5 +18,14 @@ namespace BudgetTrackerApp.ApiService.Controllers
             var response = await transactionService.GetAccountTransactionsAsync(accountId, HttpContext.RequestAborted);
             return response.ToActionResult(HttpContext);
         }
+
+        [HttpGet("{accountId}/summary")]
+        [ProducesResponseType(typeof(AccountSummaryDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetSummaryForAccount(int accountId)
+        {
+            var response = await transactionService.GetAccountSummaryAsync(accountId, HttpContext.RequestAborted);
+            return response.ToActionResult(HttpContext);
+        }
     }
 }
