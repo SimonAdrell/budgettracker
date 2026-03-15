@@ -75,7 +75,7 @@ The first dashboard version should:
 
 ---
 
-### [ ] Task 2 — Dashboard query service
+### [x] Task 2 — Dashboard query service
 **Status:** Sequential  
 **Depends on:** 1  
 **Goal:** Implement the backend read logic for one selected account.  
