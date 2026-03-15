@@ -42,7 +42,7 @@ The first dashboard version should:
 
 ## Dashboard Phase Checklist
 
-### [ ] Task 1 — Dashboard DTO contract
+### [x] Task 1 — Dashboard DTO contract
 **Status:** Sequential  
 **Depends on:** —  
 **Goal:** Add the response shape for the dashboard MVP.  
