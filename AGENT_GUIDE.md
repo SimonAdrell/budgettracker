@@ -1,68 +1,80 @@
-# Agent Guide
+# AGENT_GUIDE.md
 
-## Target Surface
+## Dashboard Phase Rules
 
-- The default product UI target is `BudgetTrackerApp/frontend`.
-- `BudgetTrackerApp.Web` is out of scope unless a task explicitly names it.
-- The repo should move toward one clear MVP user flow in React, not duplicate feature work across both frontends.
+The current phase is focused on building a post-login dashboard in `BudgetTrackerApp/frontend`.
 
-## Core Working Rules
+### Product Goal
+After login, authenticated users should land on `/dashboard` and immediately see useful account information.
 
-- Make minimal changes.
-- Work on one task at a time.
-- Keep each PR or agent run focused on one vertical slice.
-- Prefer additive changes over structural churn.
-- Do not modify application code unless the task requires it.
-- Do not refactor unrelated areas while implementing a feature.
-- Do not invent missing product behavior; verify what already exists first.
+### Dashboard v1 Scope
+Build only:
+- one account-scoped dashboard view
+- current balance
+- last updated
+- transaction count
+- recent transactions preview
+- no-account state
+- no-transactions state
+- loading/error states
+- simple path to import transactions
 
-## Scope Discipline
+Do not build yet:
+- charting
+- snapshot visualizations
+- global sidebar/navigation system
+- all-account combined dashboard
+- category analytics
+- advanced filtering/search
+- budget planning features
 
-- Start from the current MVP goal: import and view bank data safely.
-- Extend what already exists before proposing new architecture.
-- Treat the backend model as a source of hints, not proof that a full feature is already implemented.
-- If a task is ambiguous, restate the concrete target surface before making changes.
+## Rules for Dashboard Tasks
 
-## Preferred Task Flow
+- Keep dashboard work in `BudgetTrackerApp/frontend`
+- Do not modify `BudgetTrackerApp.Web`
+- Keep backend changes minimal and additive
+- Prefer one endpoint for dashboard v1
+- Prefer transaction-derived data over snapshot-read logic for v1
+- Avoid introducing global state for dashboard v1
+- Keep account selection as local page state initially
 
-1. Confirm the task scope and the correct target project.
-2. Inspect the existing code path before changing anything.
-3. Change the smallest useful set of files.
-4. Add or update tests when backend behavior changes.
-5. Verify the exact success path described in the task.
-6. Stop after the requested slice is complete.
+## Verification Rules for Dashboard Tasks
 
-## Verification Expectations
+For backend dashboard tasks:
+- verify endpoint shape
+- verify auth behavior
+- verify empty-account behavior
+- verify populated-account behavior
 
-- Backend work: add or update automated tests, or provide a reproducible API verification path.
-- Frontend work: run `npm run build` and do a short manual smoke check of the affected path.
-- Import/snapshot work: verify financial behavior, not just HTTP or rendering behavior.
-- Auth work: verify login state, protected access, and failure behavior.
+For frontend dashboard tasks:
+- verify authenticated navigation to `/dashboard`
+- verify unauthenticated redirect to `/login`
+- verify no-account state
+- verify no-transaction state
+- verify populated-account state
+- verify account switching
+- verify import → dashboard flow
 
-## Human-Review Areas
+## Parallel Work Warning
 
-Human review should be mandatory for:
+Only a small number of dashboard tasks are safe to run in parallel.
 
-- auth and security changes
-- token storage, refresh, logout, and CORS behavior
-- EF Core model changes and migrations
-- startup migration behavior
-- import parsing logic
-- duplicate-detection rules
-- snapshot math and date semantics
-- any task that touches account-access rules or sharing behavior
+After the dashboard endpoint is merged, the only clearly safe parallel tasks are:
+- dashboard API tests
+- frontend dashboard service
+- dashboard page shell
 
-## Safe Defaults For Agents
+Do not parallelize tasks that heavily modify:
+- `Dashboard.jsx`
+- `Dashboard.css`
+- `App.jsx`
 
-- Prefer backend-first, then frontend.
-- Prefer one endpoint, one page, one service, or one test addition per task.
-- Reuse existing patterns in `frontend/src/pages`, `frontend/src/services`, `BudgetTrackerApp.ApiService`, and `BudgetTrackerApp.Tests`.
-- Keep docs aligned with the code whenever the exposed behavior changes.
+## Human Review Areas
 
-## What Not To Do
-
-- Do not build features in both frontends.
-- Do not batch dashboard, categories, auth cleanup, and API refactors into one change.
-- Do not "simplify" financial date logic without tests proving the result is still correct.
-- Do not broaden scope because the schema suggests future features.
-- Do not rename files or move modules unless the task explicitly calls for it.
+Require manual review for:
+- login redirect changes
+- route protection
+- account access enforcement
+- dashboard data correctness
+- stale data when switching accounts
+- any auth changes
