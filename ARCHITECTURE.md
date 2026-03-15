@@ -1,76 +1,87 @@
-# Architecture
+# ARCHITECTURE.md
 
-## Primary Decisions
+## Current Frontend Direction
 
-- Keep the current Aspire + `BudgetTrackerApp.ApiService` + PostgreSQL + React backbone.
-- Treat `BudgetTrackerApp/frontend` as the primary MVP UI.
-- Treat `BudgetTrackerApp.Web` as secondary and out of scope unless a task explicitly requests work there.
-- Build the MVP by extending existing seams instead of redesigning auth, persistence, or project structure.
+Use `BudgetTrackerApp/frontend` as the primary product UI.
 
-## Current Shape
+Do not add dashboard work to `BudgetTrackerApp.Web` unless explicitly requested.
 
-The current architecture is a good fit for incremental delivery:
+## Dashboard Phase Architecture
 
-- `BudgetTrackerApp.AppHost` orchestrates PostgreSQL, the API service, the Blazor frontend, and the Vite React app.
-- `BudgetTrackerApp.ApiService` contains the domain/service logic and the main backend surface.
-- EF Core persistence already models users, refresh tokens, accounts, account-user links, categories, transactions, and balance snapshots.
-- `BudgetTrackerApp.Tests` already provides meaningful automated coverage and is a strong base for agent-driven work.
+### Dashboard v1 Backend Shape
+For the first dashboard version, use:
+- one account-scoped read endpoint
+- one compact dashboard DTO contract
+- one dashboard service
 
-## What Stays
+Recommended endpoint:
+- `GET /api/accounts/{accountId}/dashboard`
 
-- The existing database model shape should stay.
-- The current auth foundation should stay.
-- The import pipeline should stay as the working ingestion path for the MVP.
-- The snapshot subsystem should stay as the source for balance-history derivation.
-- Aspire orchestration should stay as the local development story.
+Recommended v1 response shape:
+- `accountId`
+- `accountName`
+- `currentBalance`
+- `lastUpdated`
+- `transactionCount`
+- `recentTransactions[]`
+- `hasTransactions`
 
-## What Should Be Simplified Now
+Do not include in v1:
+- charts
+- snapshot series
+- category summaries
+- all-account aggregation
+- budget analytics
 
-- Standardize frontend API access early so agents are not duplicating route logic across services.
-- Keep feature work focused on the React app until the MVP is complete.
-- Add only the minimum read/query endpoints needed to support transaction viewing and a simple account summary.
+### Dashboard v1 Data Source
+Use transactions directly for dashboard v1.
 
-## What Should Wait
+Reason:
+- transactions already exist and are queryable
+- snapshot generation exists, but snapshot read APIs are not yet part of the current surface
+- transaction-derived summary is the lowest-risk path for a first dashboard
 
-These are good candidates for later refactoring, not now:
+### Frontend Dashboard Shape
+Dashboard v1 should add:
+- `/dashboard` route
+- `Dashboard.jsx`
+- `Dashboard.css`
+- `dashboardService.js`
 
-- normalizing the backend endpoint/module style across `Program.cs` mappings and controller-based endpoints
-- redesigning the import subsystem into a broader plugin architecture
-- broader UI redesign or dual-frontend parity
-- large-scale endpoint-style cleanup before the MVP user flow works
+The page should include:
+- header
+- account selector
+- ledger hero section
+- recent activity section
+- state-aware empty/loading/error handling
 
-## Technical Constraints
+### Redirect Behavior
+Update the React app so that:
+- successful login goes to `/dashboard`
+- authenticated `/` goes to `/dashboard`
 
-- Do not assume the modeled feature set is fully exposed. The schema is ahead of the visible UI/API.
-- Do not conflate `BookingDate` and `TransactionDate`. Duplicate detection and snapshot generation rely on date semantics that are easy to damage.
-- Do not weaken access scoping. Transaction and account reads must stay tied to accounts the current user can access.
-- Do not assume the frontend auth flow is complete just because the backend supports refresh tokens.
-- Treat auto-applied migrations on startup as a development convenience that needs careful review when schema work is involved.
+Keep `/user-info` available only if useful, but remove it from the main flow.
 
-## Known Fragile Areas
+## Dashboard-Phase Implementation Principle
 
-- Import duplicate detection
-- Balance calculations and same-day ordering
-- Snapshot regeneration scope after import
-- Token refresh and logout behavior
-- Frontend route/base-path consistency
-- Dual-frontend ambiguity in AppHost
+Prefer this order:
+1. DTO contract
+2. backend service
+3. backend endpoint
+4. backend tests
+5. frontend service
+6. dashboard page shell
+7. redirect change
+8. page data wiring
+9. visual polish and state handling
 
-## Explicit Deferrals
+## Dashboard-Phase Concurrency Guidance
 
-The following are intentionally deferred until after the MVP is usable:
+Safe parallel work begins only after the dashboard endpoint exists.
 
-- category hierarchy and richer category UX
-- budget rules and monthly planning
-- richer analytics and charts
-- account-sharing UI
-- multiple importer plugins
-- advanced reporting/export
-- production-grade observability and deployment concerns
+Safe parallel tasks:
+- backend dashboard tests
+- frontend dashboard service
+- dashboard page shell / route
 
-## Anti-Goals For Now
-
-- Do not build the same product UI twice in Blazor and React.
-- Do not redesign auth or persistence.
-- Do not add AI or "smart" categorization features.
-- Do not start with broad refactors before the core "import and view your data" flow works.
+Do not heavily parallelize later dashboard tasks because they converge on the same frontend files.
