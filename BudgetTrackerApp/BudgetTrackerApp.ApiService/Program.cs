@@ -338,7 +338,6 @@ app.MapPost("/api/accounts", async (
 .WithName("CreateAccount")
 .RequireAuthorization();
 
-
 app.MapDefaultEndpoints();
 
 await app.RunAsync();

@@ -39,6 +39,7 @@ The first dashboard version should:
 | 13 | Loading and error states | Sequential | 9 | `BudgetTrackerApp/frontend/src/pages/Dashboard.jsx`, `BudgetTrackerApp/frontend/src/pages/Dashboard.css` |
 | 14 | Dashboard/import navigation polish | Sequential | 10, 11, 12, 13 | `BudgetTrackerApp/frontend/src/pages/Dashboard.jsx`, `BudgetTrackerApp/frontend/src/pages/Import.jsx`, optionally `BudgetTrackerApp/frontend/src/pages/UserInfo.jsx` |
 | 15 | Final smoke-test pass | Sequential | 1–14 | optional checklist in `docs/` or PR checklist only |
+| 16 | Move remaining minimal APIs to controllers | Sequential after 15 | 15 | `BudgetTrackerApp/BudgetTrackerApp.ApiService/Program.cs`, `BudgetTrackerApp/BudgetTrackerApp.ApiService/Controllers/` |
 
 ## Dashboard Phase Checklist
 
@@ -102,7 +103,7 @@ The first dashboard version should:
 
 ---
 
-### [ ] Task 3 — Dashboard endpoint
+### [x] Task 3 — Dashboard endpoint
 **Status:** Sequential  
 **Depends on:** 2  
 **Goal:** Expose one backend endpoint for the dashboard page.  
@@ -393,6 +394,26 @@ Do not refactor during this step.
 **Success criteria:**
 - Smoke checklist is complete.
 - No auth/import/account creation regressions are introduced.
+
+---
+
+### [ ] Task 16 — Move remaining minimal APIs to controllers
+**Status:** Sequential after 15  
+**Depends on:** 15  
+**Goal:** Move application endpoints out of `Program.cs` and into controllers.  
+**Why it matters:** Keeps API routing consistent and prevents new endpoint work from bypassing the controller/service pattern.  
+**Likely files:**
+- `BudgetTrackerApp/BudgetTrackerApp.ApiService/Program.cs`
+- `BudgetTrackerApp/BudgetTrackerApp.ApiService/Controllers/`
+
+**Implementation instructions:**
+- Move remaining auth/account application endpoints from `Program.cs` into controller classes.
+- Keep route shapes and authorization behavior unchanged.
+- Leave infrastructure/bootstrap-only setup in `Program.cs`.
+
+**Success criteria:**
+- Application endpoints no longer live in `Program.cs`.
+- Controller routes preserve current behavior.
 
 ## Safe Parallel Work
 
