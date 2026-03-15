@@ -81,6 +81,7 @@ public class ImportService : IImportService
             var lfImporter = new LFImport();
 
             var transactions = lfImporter.ImportTransactions(stream);
+            DateOnly? earliestImportedTransactionDate = null;
 
             // Validate data
             var validation = ValidateImportData(transactions);
@@ -122,26 +123,35 @@ public class ImportService : IImportService
 
                 _context.Transactions.Add(newTransaction);
                 response.ImportedCount++;
+
+                if (!earliestImportedTransactionDate.HasValue || transaction.TransactionDate < earliestImportedTransactionDate.Value)
+                {
+                    earliestImportedTransactionDate = transaction.TransactionDate;
+                }
             }
 
             await _context.SaveChangesAsync(cancellationToken);
 
             response.Success = true;
+
+            if (response.ImportedCount > 0 && earliestImportedTransactionDate.HasValue)
+            {
+                var latestAffectedTransactionDate = await _context.Transactions
+                    .Where(t => t.AccountId == accountId)
+                    .MaxAsync(t => t.TransactionDate, cancellationToken);
+
+                await _snapshotService.GenerateSnapshotsAsync(
+                    accountId,
+                    earliestImportedTransactionDate.Value,
+                    latestAffectedTransactionDate,
+                    cancellationToken);
+            }
         }
         catch (Exception ex)
         {
             response.Success = false;
             response.Errors.Add($"Error importing transactions: {ex.Message}");
             response.ErrorCount++;
-        }
-
-        // Generate balance snapshots after successful import
-        // Note: We regenerate all snapshots to ensure correctness, as new transactions
-        // may affect the balance history. For large accounts, consider implementing
-        // a more targeted approach that only regenerates affected date ranges.
-        if (response.ImportedCount > 0)
-        {
-            await _snapshotService.GenerateSnapshotsForAllTransactionsAsync(accountId, cancellationToken);
         }
 
         return ServiceResponse<ImportResponse>.Success(response);
