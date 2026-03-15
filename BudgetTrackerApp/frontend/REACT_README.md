@@ -42,7 +42,7 @@ VITE_API_URL=http://localhost:<your-api-port>
 VITE_API_BASE_URL=http://localhost:<your-api-port>/api
 ```
 
-**Note**: When running with Aspire, check the Aspire dashboard for the actual API service port. During the transition to the shared client, the Vite dev proxy also supports existing legacy service calls to `/api/api/...`.
+**Note**: When running with Aspire, check the Aspire dashboard for the actual API service port.
 
 ### 3. Run the Development Server
 
@@ -216,7 +216,6 @@ If you see CORS errors in the browser console:
 2. Verify PostgreSQL container is running via Aspire dashboard
 3. Check the browser console for the actual API URL being used
 4. Ensure no firewall is blocking the connection
-5. If you are testing an older service that still calls `/api/api/...`, use the Vite dev server so the temporary compatibility proxy can rewrite it to `/api/...`
 
 ## Next Steps
 

@@ -417,4 +417,3 @@ Why:
 - locks the response shape early
 - reduces ambiguity for both backend and frontend
 - enables the backend and frontend dashboard work to proceed without guessing
-

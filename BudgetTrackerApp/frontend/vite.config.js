@@ -11,12 +11,6 @@ export default defineConfig(({ mode }) => {
       port: parseInt(env.VITE_PORT),
       proxy: {
         // "apiservice" is the name of the API in AppHost.cs.
-        '/api/api': {
-          target: process.env.services__apiservice__https__0 || process.env.services__apiservice__http__0,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/api\/api/, '/api')
-        },
         '/api': {
           target: process.env.services__apiservice__https__0 || process.env.services__apiservice__http__0,
           changeOrigin: true,
