@@ -4,7 +4,7 @@ import authService from './authService';
 const dashboardService = {
   getAccountDashboard: async (accountId) => {
     const token = authService.getToken();
-    const response = await apiClient.get(`/dashboard/${accountId}`, {
+    const response = await apiClient.get(`/Dashboard/${accountId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
