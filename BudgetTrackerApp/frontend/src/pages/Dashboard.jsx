@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import accountService from '../services/accountService';
 import dashboardService from '../services/dashboardService';
 import './Dashboard.css';
@@ -15,6 +16,7 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [loadingAccounts, setLoadingAccounts] = useState(true);
@@ -114,7 +116,12 @@ function Dashboard() {
     (account) => account.id.toString() === selectedAccountId
   );
   const dashboardAccountName = dashboardData?.accountName || selectedAccount?.name || 'selected account';
+  const showFirstRunState = !loadingAccounts && !accountsError && accounts.length === 0;
   const hasDashboardData = selectedAccountId && !loadingDashboard && !dashboardError && dashboardData;
+  const showNoTransactionsState =
+    !showFirstRunState &&
+    hasDashboardData &&
+    dashboardData.hasTransactions === false;
   const recentTransactions = dashboardData?.recentTransactions?.slice(0, 8) || [];
   const showRunningBalance = recentTransactions.some((transaction) => transaction.balance != null);
 
@@ -198,166 +205,204 @@ function Dashboard() {
       </header>
 
       <main className="dashboard-shell-grid">
-        <section className="dashboard-panel" aria-labelledby="dashboard-account-selector-heading">
-          <p className="dashboard-section-label">Account focus</p>
-          <h2 id="dashboard-account-selector-heading">Source account</h2>
-          <p className="dashboard-section-copy">
-            Choose the account whose imported ledger should drive the balance summary.
-          </p>
+        {showFirstRunState && (
+          <section
+            className="dashboard-panel dashboard-panel-wide dashboard-empty-state-panel"
+            aria-labelledby="dashboard-first-run-heading"
+          >
+            <p className="dashboard-section-label">First run</p>
+            <h2 id="dashboard-first-run-heading">No accounts yet</h2>
+            <p className="dashboard-section-copy">
+              Create an account or import your first file to start this dashboard.
+            </p>
+            <button
+              type="button"
+              className="dashboard-empty-state-action"
+              onClick={() => navigate('/import')}
+            >
+              Create account or import
+            </button>
+          </section>
+        )}
 
-          {loadingAccounts && (
-            <div className="dashboard-placeholder">Loading accounts...</div>
-          )}
+        {!showFirstRunState && (
+          <section className="dashboard-panel" aria-labelledby="dashboard-account-selector-heading">
+            <p className="dashboard-section-label">Account focus</p>
+            <h2 id="dashboard-account-selector-heading">Source account</h2>
+            <p className="dashboard-section-copy">
+              Choose the account whose imported ledger should drive the balance summary.
+            </p>
 
-          {!loadingAccounts && accountsError && (
-            <div className="dashboard-placeholder">{accountsError}</div>
-          )}
+            {loadingAccounts && (
+              <div className="dashboard-placeholder">Loading accounts...</div>
+            )}
 
-          {!loadingAccounts && !accountsError && accounts.length === 0 && (
-            <div className="dashboard-placeholder">
-              No accounts are available yet. Import transactions or create an account to begin.
-            </div>
-          )}
+            {!loadingAccounts && accountsError && (
+              <div className="dashboard-placeholder">{accountsError}</div>
+            )}
 
-          {!loadingAccounts && !accountsError && accounts.length > 0 && (
-            <div className="dashboard-account-card">
-              <div className="dashboard-form-group">
-                <label htmlFor="dashboard-account-select">Reporting account</label>
-                <select
-                  id="dashboard-account-select"
-                  value={selectedAccountId}
-                  onChange={(event) => setSelectedAccountId(event.target.value)}
-                >
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name} {account.accountNumber ? `(${account.accountNumber})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedAccount && (
-                <div className="dashboard-account-card-foot">
-                  <p className="dashboard-account-card-note">
-                    Balance and activity below reflect {selectedAccount.name}.
-                  </p>
-                  {selectedAccount.accountNumber && (
-                    <p className="dashboard-account-card-detail">
-                      Account number ending in {selectedAccount.accountNumber.slice(-4)}
+            {!loadingAccounts && !accountsError && accounts.length > 0 && (
+              <div className="dashboard-account-card">
+                <div className="dashboard-form-group">
+                  <label htmlFor="dashboard-account-select">Reporting account</label>
+                  <select
+                    id="dashboard-account-select"
+                    value={selectedAccountId}
+                    onChange={(event) => setSelectedAccountId(event.target.value)}
+                  >
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} {account.accountNumber ? `(${account.accountNumber})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedAccount && (
+                  <div className="dashboard-account-card-foot">
+                    <p className="dashboard-account-card-note">
+                      Balance and activity below reflect {selectedAccount.name}.
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="dashboard-panel" aria-labelledby="dashboard-ledger-hero-heading">
-          <p className="dashboard-section-label">Ledger summary</p>
-          <h2 id="dashboard-ledger-hero-heading">Balance summary</h2>
-          <p className="dashboard-section-copy">
-            The figure below is the latest recorded balance for the selected account.
-          </p>
-          {!selectedAccountId && (
-            <div className="dashboard-placeholder dashboard-placeholder-hero">
-              Select an account to load dashboard summary data.
-            </div>
-          )}
-
-          {selectedAccountId && loadingDashboard && (
-            <div className="dashboard-placeholder dashboard-placeholder-hero">
-              Loading dashboard summary for {dashboardAccountName}...
-            </div>
-          )}
-
-          {selectedAccountId && !loadingDashboard && dashboardError && (
-            <div className="dashboard-placeholder dashboard-placeholder-hero">
-              {dashboardError}
-            </div>
-          )}
-
-          {hasDashboardData && (
-            <div className="dashboard-ledger-hero" aria-live="polite">
-              <div className="dashboard-ledger-hero-header">
-                <p className="dashboard-ledger-hero-label">Current balance</p>
-                <p className="dashboard-ledger-hero-account">{dashboardData.accountName}</p>
+                    {selectedAccount.accountNumber && (
+                      <p className="dashboard-account-card-detail">
+                        Account number ending in {selectedAccount.accountNumber.slice(-4)}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className={`dashboard-ledger-hero-balance ${getBalanceClassName(dashboardData.currentBalance)}`}>
-                {formatBalance(dashboardData.currentBalance)}
-              </p>
-              <div className="dashboard-ledger-hero-support">
-                <p className="dashboard-ledger-hero-updated">
-                  {dashboardData.hasTransactions
-                    ? formatLastUpdated(dashboardData.lastUpdated)
-                    : 'No transactions imported yet'}
-                </p>
-                <p className="dashboard-ledger-hero-meta">
-                  {formatTransactionCount(dashboardData.transactionCount)}
-                </p>
+            )}
+          </section>
+        )}
+
+        {!showFirstRunState && !showNoTransactionsState && (
+          <section className="dashboard-panel" aria-labelledby="dashboard-ledger-hero-heading">
+            <p className="dashboard-section-label">Ledger summary</p>
+            <h2 id="dashboard-ledger-hero-heading">Balance summary</h2>
+            <p className="dashboard-section-copy">
+              The figure below is the latest recorded balance for the selected account.
+            </p>
+            {!selectedAccountId && (
+              <div className="dashboard-placeholder dashboard-placeholder-hero">
+                Select an account to load dashboard summary data.
               </div>
-            </div>
-          )}
-        </section>
+            )}
 
-        <section className="dashboard-panel dashboard-panel-wide" aria-labelledby="dashboard-recent-activity-heading">
-          <p className="dashboard-section-label">Recent activity area</p>
-          <h2 id="dashboard-recent-activity-heading">Recent transactions</h2>
-          <p className="dashboard-section-copy">
-            A quick preview of the latest imported transactions for the selected account.
-          </p>
-          {!selectedAccountId && (
-            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-              <li>Select an account to load recent transactions.</li>
-            </ul>
-          )}
+            {selectedAccountId && loadingDashboard && (
+              <div className="dashboard-placeholder dashboard-placeholder-hero">
+                Loading dashboard summary for {dashboardAccountName}...
+              </div>
+            )}
 
-          {selectedAccountId && loadingDashboard && (
-            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-              <li>Loading recent activity for {dashboardAccountName}...</li>
-            </ul>
-          )}
+            {selectedAccountId && !loadingDashboard && dashboardError && (
+              <div className="dashboard-placeholder dashboard-placeholder-hero">
+                {dashboardError}
+              </div>
+            )}
 
-          {selectedAccountId && !loadingDashboard && dashboardError && (
-            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-              <li>{dashboardError}</li>
-            </ul>
-          )}
-
-          {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
-            <>
-              {recentTransactions.length === 0 ? (
-                <div className="dashboard-placeholder dashboard-placeholder-compact">
-                  No recent transactions are available for {dashboardData.accountName} yet.
+            {hasDashboardData && (
+              <div className="dashboard-ledger-hero" aria-live="polite">
+                <div className="dashboard-ledger-hero-header">
+                  <p className="dashboard-ledger-hero-label">Current balance</p>
+                  <p className="dashboard-ledger-hero-account">{dashboardData.accountName}</p>
                 </div>
-              ) : (
-                <ul className="dashboard-recent-transactions-list" aria-label="Recent transactions preview">
-                  {recentTransactions.map((transaction, index) => (
-                    <li
-                      key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
-                      className="dashboard-transaction-preview"
-                    >
-                      <div className="dashboard-transaction-preview-main">
-                        <p className="dashboard-transaction-date">
-                          {formatTransactionDate(transaction.date)}
-                        </p>
-                        <p className="dashboard-transaction-description">{transaction.description}</p>
-                      </div>
-                      <div className="dashboard-transaction-preview-amounts">
-                        <p className={`dashboard-transaction-amount ${getTransactionAmountClassName(transaction.amount)}`}>
-                          {formatBalance(transaction.amount)}
-                        </p>
-                        {showRunningBalance && transaction.balance != null && (
-                          <p className="dashboard-transaction-balance">
-                            Balance {formatBalance(transaction.balance)}
+                <p className={`dashboard-ledger-hero-balance ${getBalanceClassName(dashboardData.currentBalance)}`}>
+                  {formatBalance(dashboardData.currentBalance)}
+                </p>
+                <div className="dashboard-ledger-hero-support">
+                  <p className="dashboard-ledger-hero-updated">
+                    {formatLastUpdated(dashboardData.lastUpdated)}
+                  </p>
+                  <p className="dashboard-ledger-hero-meta">
+                    {formatTransactionCount(dashboardData.transactionCount)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {!showFirstRunState && showNoTransactionsState && (
+          <section
+            className="dashboard-panel dashboard-empty-state-panel"
+            aria-labelledby="dashboard-no-transactions-heading"
+          >
+            <p className="dashboard-section-label">Next step</p>
+            <h2 id="dashboard-no-transactions-heading">No transactions yet</h2>
+            <p className="dashboard-section-copy">
+              {dashboardAccountName} is ready. Import transactions to show its balance and recent activity.
+            </p>
+            <button
+              type="button"
+              className="dashboard-empty-state-action"
+              onClick={() => navigate('/import')}
+            >
+              Import transactions
+            </button>
+          </section>
+        )}
+
+        {!showFirstRunState && !showNoTransactionsState && (
+          <section className="dashboard-panel dashboard-panel-wide" aria-labelledby="dashboard-recent-activity-heading">
+            <p className="dashboard-section-label">Recent activity area</p>
+            <h2 id="dashboard-recent-activity-heading">Recent transactions</h2>
+            <p className="dashboard-section-copy">
+              A quick preview of the latest imported transactions for the selected account.
+            </p>
+            {!selectedAccountId && (
+              <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+                <li>Select an account to load recent transactions.</li>
+              </ul>
+            )}
+
+            {selectedAccountId && loadingDashboard && (
+              <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+                <li>Loading recent activity for {dashboardAccountName}...</li>
+              </ul>
+            )}
+
+            {selectedAccountId && !loadingDashboard && dashboardError && (
+              <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+                <li>{dashboardError}</li>
+              </ul>
+            )}
+
+            {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
+              <>
+                {recentTransactions.length === 0 ? (
+                  <div className="dashboard-placeholder dashboard-placeholder-compact">
+                    No recent transactions are available for {dashboardData.accountName} yet.
+                  </div>
+                ) : (
+                  <ul className="dashboard-recent-transactions-list" aria-label="Recent transactions preview">
+                    {recentTransactions.map((transaction, index) => (
+                      <li
+                        key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
+                        className="dashboard-transaction-preview"
+                      >
+                        <div className="dashboard-transaction-preview-main">
+                          <p className="dashboard-transaction-date">
+                            {formatTransactionDate(transaction.date)}
                           </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </section>
+                          <p className="dashboard-transaction-description">{transaction.description}</p>
+                        </div>
+                        <div className="dashboard-transaction-preview-amounts">
+                          <p className={`dashboard-transaction-amount ${getTransactionAmountClassName(transaction.amount)}`}>
+                            {formatBalance(transaction.amount)}
+                          </p>
+                          {showRunningBalance && transaction.balance != null && (
+                            <p className="dashboard-transaction-balance">
+                              Balance {formatBalance(transaction.balance)}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );
