@@ -21,15 +21,20 @@ function Dashboard() {
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [accountsError, setAccountsError] = useState('');
+  const [accountsReloadKey, setAccountsReloadKey] = useState(0);
   const [dashboardData, setDashboardData] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState('');
+  const [dashboardReloadKey, setDashboardReloadKey] = useState(0);
   const dashboardRequestSequence = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadAccounts = async () => {
+      setLoadingAccounts(true);
+      setAccountsError('');
+
       try {
         const accountsData = await accountService.getAccounts();
 
@@ -38,7 +43,17 @@ function Dashboard() {
         }
 
         setAccounts(accountsData);
-        setSelectedAccountId(accountsData[0]?.id.toString() || '');
+        setSelectedAccountId((currentSelectedAccountId) => {
+          const hasCurrentSelection = accountsData.some(
+            (account) => account.id.toString() === currentSelectedAccountId
+          );
+
+          if (hasCurrentSelection) {
+            return currentSelectedAccountId;
+          }
+
+          return accountsData[0]?.id.toString() || '';
+        });
         setAccountsError('');
       } catch (error) {
         if (!isMounted) {
@@ -61,7 +76,7 @@ function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [accountsReloadKey]);
 
   useEffect(() => {
     const requestId = dashboardRequestSequence.current + 1;
@@ -110,14 +125,24 @@ function Dashboard() {
     return () => {
       isActive = false;
     };
-  }, [selectedAccountId]);
+  }, [selectedAccountId, dashboardReloadKey]);
+
+  const reloadAccounts = () => {
+    setAccountsReloadKey((currentValue) => currentValue + 1);
+  };
+
+  const reloadDashboard = () => {
+    setDashboardReloadKey((currentValue) => currentValue + 1);
+  };
 
   const selectedAccount = accounts.find(
     (account) => account.id.toString() === selectedAccountId
   );
   const dashboardAccountName = dashboardData?.accountName || selectedAccount?.name || 'selected account';
   const showFirstRunState = !loadingAccounts && !accountsError && accounts.length === 0;
-  const hasDashboardData = selectedAccountId && !loadingDashboard && !dashboardError && dashboardData;
+  const hasDashboardData = Boolean(
+    selectedAccountId && !loadingDashboard && !dashboardError && dashboardData
+  );
   const showNoTransactionsState =
     !showFirstRunState &&
     hasDashboardData &&
@@ -193,6 +218,80 @@ function Dashboard() {
     return 'dashboard-transaction-amount-neutral';
   };
 
+  const renderAccountLoadingState = () => (
+    <div className="dashboard-account-card dashboard-account-card-loading" aria-hidden="true">
+      <div className="dashboard-skeleton dashboard-skeleton-label" />
+      <div className="dashboard-skeleton dashboard-skeleton-input" />
+      <div className="dashboard-account-card-foot">
+        <div className="dashboard-skeleton dashboard-skeleton-copy" />
+        <div className="dashboard-skeleton dashboard-skeleton-detail" />
+      </div>
+    </div>
+  );
+
+  const renderFeedbackCard = (message, actionLabel, actionHandler, options = {}) => {
+    const { hero = false, alert = false } = options;
+
+    return (
+      <div
+        className={`dashboard-feedback-card${hero ? ' dashboard-feedback-card-hero' : ''}`}
+        role={alert ? 'alert' : 'status'}
+      >
+        <p>{message}</p>
+        {actionLabel && actionHandler && (
+          <button
+            type="button"
+            className="dashboard-feedback-action"
+            onClick={actionHandler}
+          >
+            {actionLabel}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderHeroSkeleton = () => (
+    <div className="dashboard-loading-block" role="status" aria-live="polite">
+      <p className="dashboard-loading-copy">
+        Loading dashboard summary for {dashboardAccountName}...
+      </p>
+      <div className="dashboard-ledger-hero dashboard-ledger-hero-skeleton" aria-hidden="true">
+        <div className="dashboard-ledger-hero-header">
+          <div className="dashboard-skeleton dashboard-skeleton-hero-label" />
+          <div className="dashboard-skeleton dashboard-skeleton-hero-account" />
+        </div>
+        <div className="dashboard-skeleton dashboard-skeleton-hero-balance" />
+        <div className="dashboard-ledger-hero-support">
+          <div className="dashboard-skeleton dashboard-skeleton-hero-meta" />
+          <div className="dashboard-skeleton dashboard-skeleton-hero-detail" />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRecentTransactionsSkeleton = () => (
+    <div className="dashboard-loading-block" role="status" aria-live="polite">
+      <p className="dashboard-loading-copy">
+        Loading recent activity for {dashboardAccountName}...
+      </p>
+      <ul className="dashboard-recent-transactions-list" aria-hidden="true">
+        {[0, 1, 2].map((item) => (
+          <li key={item} className="dashboard-transaction-preview dashboard-transaction-preview-skeleton">
+            <div className="dashboard-transaction-preview-main">
+              <div className="dashboard-skeleton dashboard-skeleton-transaction-date" />
+              <div className="dashboard-skeleton dashboard-skeleton-transaction-description" />
+            </div>
+            <div className="dashboard-transaction-preview-amounts">
+              <div className="dashboard-skeleton dashboard-skeleton-transaction-amount" />
+              <div className="dashboard-skeleton dashboard-skeleton-transaction-balance" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   return (
     <div className="dashboard-shell">
       <header className="dashboard-panel dashboard-shell-header">
@@ -234,11 +333,16 @@ function Dashboard() {
             </p>
 
             {loadingAccounts && (
-              <div className="dashboard-placeholder">Loading accounts...</div>
+              renderAccountLoadingState()
             )}
 
             {!loadingAccounts && accountsError && (
-              <div className="dashboard-placeholder">{accountsError}</div>
+              renderFeedbackCard(
+                accountsError,
+                'Retry account load',
+                reloadAccounts,
+                { alert: true }
+              )
             )}
 
             {!loadingAccounts && !accountsError && accounts.length > 0 && (
@@ -281,22 +385,33 @@ function Dashboard() {
             <p className="dashboard-section-copy">
               The figure below is the latest recorded balance for the selected account.
             </p>
-            {!selectedAccountId && (
+            {loadingAccounts && renderHeroSkeleton()}
+
+            {!loadingAccounts && accountsError && (
+              renderFeedbackCard(
+                'Retry account loading to unlock the balance summary.',
+                'Retry account load',
+                reloadAccounts
+              )
+            )}
+
+            {!loadingAccounts && !accountsError && !selectedAccountId && (
               <div className="dashboard-placeholder dashboard-placeholder-hero">
                 Select an account to load dashboard summary data.
               </div>
             )}
 
-            {selectedAccountId && loadingDashboard && (
-              <div className="dashboard-placeholder dashboard-placeholder-hero">
-                Loading dashboard summary for {dashboardAccountName}...
-              </div>
+            {!loadingAccounts && !accountsError && selectedAccountId && loadingDashboard && (
+              renderHeroSkeleton()
             )}
 
             {selectedAccountId && !loadingDashboard && dashboardError && (
-              <div className="dashboard-placeholder dashboard-placeholder-hero">
-                {dashboardError}
-              </div>
+              renderFeedbackCard(
+                dashboardError,
+                'Retry dashboard load',
+                reloadDashboard,
+                { hero: true, alert: true }
+              )
             )}
 
             {hasDashboardData && (
@@ -348,22 +463,33 @@ function Dashboard() {
             <p className="dashboard-section-copy">
               A quick preview of the latest imported transactions for the selected account.
             </p>
-            {!selectedAccountId && (
+            {loadingAccounts && renderRecentTransactionsSkeleton()}
+
+            {!loadingAccounts && accountsError && (
+              renderFeedbackCard(
+                'Retry account loading to unlock recent activity.',
+                'Retry account load',
+                reloadAccounts
+              )
+            )}
+
+            {!loadingAccounts && !accountsError && !selectedAccountId && (
               <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
                 <li>Select an account to load recent transactions.</li>
               </ul>
             )}
 
-            {selectedAccountId && loadingDashboard && (
-              <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-                <li>Loading recent activity for {dashboardAccountName}...</li>
-              </ul>
+            {!loadingAccounts && !accountsError && selectedAccountId && loadingDashboard && (
+              renderRecentTransactionsSkeleton()
             )}
 
             {selectedAccountId && !loadingDashboard && dashboardError && (
-              <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-                <li>{dashboardError}</li>
-              </ul>
+              renderFeedbackCard(
+                dashboardError,
+                'Retry dashboard load',
+                reloadDashboard,
+                { alert: true }
+              )
             )}
 
             {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (

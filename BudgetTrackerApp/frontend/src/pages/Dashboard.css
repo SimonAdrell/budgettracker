@@ -108,6 +108,90 @@
   min-height: 0;
 }
 
+.dashboard-loading-block {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dashboard-loading-copy {
+  margin: 0;
+  color: #52606d;
+  font-size: 0.92rem;
+}
+
+.dashboard-feedback-card {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  min-height: 96px;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f5f8fb 100%);
+  display: grid;
+  gap: 0.75rem;
+  align-content: center;
+}
+
+.dashboard-feedback-card p {
+  margin: 0;
+  color: #52606d;
+  line-height: 1.5;
+}
+
+.dashboard-feedback-card-hero {
+  min-height: 140px;
+}
+
+.dashboard-feedback-action {
+  justify-self: start;
+  padding: 0.7rem 1rem;
+  border: 1px solid #bcccdc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #102a43;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboard-feedback-action:hover {
+  background: #f8fbff;
+}
+
+.dashboard-feedback-action:focus-visible {
+  outline: 3px solid rgba(72, 101, 129, 0.28);
+  outline-offset: 3px;
+}
+
+.dashboard-skeleton {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e7eef5 0%, #f5f8fb 50%, #e7eef5 100%);
+  background-size: 200% 100%;
+  animation: dashboard-skeleton-shift 1.6s ease-in-out infinite;
+}
+
+.dashboard-skeleton-label {
+  width: 8rem;
+  height: 0.85rem;
+}
+
+.dashboard-skeleton-input {
+  width: 100%;
+  height: 3rem;
+  border-radius: 12px;
+}
+
+.dashboard-skeleton-copy {
+  width: 80%;
+  height: 0.95rem;
+}
+
+.dashboard-skeleton-detail {
+  width: 55%;
+  height: 0.85rem;
+}
+
 .dashboard-form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -145,6 +229,11 @@
   border-radius: 18px;
   background: linear-gradient(180deg, #fcfdff 0%, #f5f8fb 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+.dashboard-account-card-loading {
+  display: grid;
+  gap: 1rem;
 }
 
 .dashboard-account-card-foot {
@@ -192,6 +281,11 @@
   gap: 0.8rem;
   align-content: start;
   justify-items: start;
+}
+
+.dashboard-ledger-hero-skeleton {
+  width: 100%;
+  max-width: 100%;
 }
 
 .dashboard-ledger-hero-header,
@@ -264,6 +358,31 @@
   color: #7b8794;
 }
 
+.dashboard-skeleton-hero-label {
+  width: 7rem;
+  height: 0.75rem;
+}
+
+.dashboard-skeleton-hero-account {
+  width: 12rem;
+  height: 1rem;
+}
+
+.dashboard-skeleton-hero-balance {
+  width: min(100%, 18rem);
+  height: 4rem;
+}
+
+.dashboard-skeleton-hero-meta {
+  width: 10rem;
+  height: 0.95rem;
+}
+
+.dashboard-skeleton-hero-detail {
+  width: 13rem;
+  height: 0.9rem;
+}
+
 .dashboard-placeholder-list {
   margin-top: 1.25rem;
   padding-left: 1.25rem;
@@ -289,6 +408,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.dashboard-transaction-preview-skeleton {
+  min-height: 86px;
 }
 
 .dashboard-transaction-preview-main,
@@ -353,6 +476,36 @@
   font-size: 0.88rem;
   color: #7b8794;
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+.dashboard-skeleton-transaction-date {
+  width: 7rem;
+  height: 0.75rem;
+}
+
+.dashboard-skeleton-transaction-description {
+  width: min(100%, 16rem);
+  height: 1rem;
+}
+
+.dashboard-skeleton-transaction-amount {
+  width: 6rem;
+  height: 1rem;
+}
+
+.dashboard-skeleton-transaction-balance {
+  width: 8rem;
+  height: 0.85rem;
+}
+
+@keyframes dashboard-skeleton-shift {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 @media (max-width: 640px) {
