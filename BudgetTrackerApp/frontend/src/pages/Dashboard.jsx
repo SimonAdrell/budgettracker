@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import accountService from '../services/accountService';
+import dashboardService from '../services/dashboardService';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -7,6 +8,10 @@ function Dashboard() {
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [accountsError, setAccountsError] = useState('');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+  const [dashboardError, setDashboardError] = useState('');
+  const dashboardRequestSequence = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -45,9 +50,59 @@ function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    const requestId = dashboardRequestSequence.current + 1;
+    dashboardRequestSequence.current = requestId;
+
+    if (!selectedAccountId) {
+      setDashboardData(null);
+      setDashboardError('');
+      setLoadingDashboard(false);
+      return undefined;
+    }
+
+    let isActive = true;
+
+    const loadDashboard = async () => {
+      setDashboardData(null);
+      setDashboardError('');
+      setLoadingDashboard(true);
+
+      try {
+        const dashboardPayload = await dashboardService.getAccountDashboard(selectedAccountId);
+
+        if (!isActive || dashboardRequestSequence.current !== requestId) {
+          return;
+        }
+
+        setDashboardData(dashboardPayload);
+        setDashboardError('');
+      } catch (error) {
+        if (!isActive || dashboardRequestSequence.current !== requestId) {
+          return;
+        }
+
+        console.error('Error loading dashboard data:', error);
+        setDashboardData(null);
+        setDashboardError('Failed to load dashboard data for the selected account.');
+      } finally {
+        if (isActive && dashboardRequestSequence.current === requestId) {
+          setLoadingDashboard(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedAccountId]);
+
   const selectedAccount = accounts.find(
     (account) => account.id.toString() === selectedAccountId
   );
+  const dashboardAccountName = dashboardData?.accountName || selectedAccount?.name || 'selected account';
 
   return (
     <div className="dashboard-shell">
@@ -112,25 +167,67 @@ function Dashboard() {
           <h2 id="dashboard-ledger-hero-heading">Balance summary</h2>
           <p className="dashboard-section-copy">
             The main balance, last updated timestamp, and transaction count will
-            render here once dashboard data wiring is in place.
+            render from page-local dashboard state in the next task.
           </p>
-          <div className="dashboard-placeholder dashboard-placeholder-hero">
-            Ledger hero placeholder
-          </div>
+          {!selectedAccountId && (
+            <div className="dashboard-placeholder dashboard-placeholder-hero">
+              Select an account to load dashboard summary data.
+            </div>
+          )}
+
+          {selectedAccountId && loadingDashboard && (
+            <div className="dashboard-placeholder dashboard-placeholder-hero">
+              Loading dashboard summary for {dashboardAccountName}...
+            </div>
+          )}
+
+          {selectedAccountId && !loadingDashboard && dashboardError && (
+            <div className="dashboard-placeholder dashboard-placeholder-hero">
+              {dashboardError}
+            </div>
+          )}
+
+          {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
+            <div className="dashboard-placeholder dashboard-placeholder-hero">
+              Dashboard data loaded for {dashboardData.accountName}. Balance summary
+              fields are ready to render.
+            </div>
+          )}
         </section>
 
         <section className="dashboard-panel dashboard-panel-wide" aria-labelledby="dashboard-recent-activity-heading">
           <p className="dashboard-section-label">Recent activity area</p>
           <h2 id="dashboard-recent-activity-heading">Recent transactions</h2>
           <p className="dashboard-section-copy">
-            A compact preview list will appear here after the account dashboard
-            API is wired into this page.
+            A compact preview list will render from page-local dashboard state in
+            the next task.
           </p>
-          <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-            <li>Recent activity placeholder</li>
-            <li>Recent activity placeholder</li>
-            <li>Recent activity placeholder</li>
-          </ul>
+          {!selectedAccountId && (
+            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+              <li>Select an account to load recent transactions.</li>
+            </ul>
+          )}
+
+          {selectedAccountId && loadingDashboard && (
+            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+              <li>Loading recent activity for {dashboardAccountName}...</li>
+            </ul>
+          )}
+
+          {selectedAccountId && !loadingDashboard && dashboardError && (
+            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+              <li>{dashboardError}</li>
+            </ul>
+          )}
+
+          {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
+            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
+              <li>
+                {dashboardData.recentTransactions.length} recent transaction item(s)
+                are ready for {dashboardData.accountName}.
+              </li>
+            </ul>
+          )}
         </section>
       </main>
     </div>
