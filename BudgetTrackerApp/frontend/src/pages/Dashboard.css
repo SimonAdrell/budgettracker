@@ -47,6 +47,10 @@
   color: #52606d;
 }
 
+.dashboard-shell-actions {
+  margin-top: 1.25rem;
+}
+
 .dashboard-shell-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

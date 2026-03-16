@@ -7,13 +7,31 @@
 .import-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 30px;
 }
 
 .import-header h1 {
   margin: 0;
   color: #333;
+}
+
+.import-flow-copy {
+  margin: 8px 0 0;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+.import-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.import-header-button {
+  white-space: nowrap;
 }
 
 .logout-button {
@@ -173,6 +191,10 @@
   margin: 4px 0;
 }
 
+.import-success-actions {
+  margin-top: 16px;
+}
+
 .file-info {
   margin-top: 10px;
   padding: 10px;
@@ -186,4 +208,14 @@
   display: inline-block;
   margin-left: 10px;
   color: #007bff;
+}
+
+@media (max-width: 640px) {
+  .import-header {
+    flex-direction: column;
+  }
+
+  .import-header-actions {
+    width: 100%;
+  }
 }
