@@ -58,7 +58,7 @@ function App() {
           path="/"
           element={
             authService.isAuthenticated() ? (
-              <Navigate to="/import" replace />
+              <Navigate to="/dashboard" replace />
             ) : (
               <Navigate to="/login" replace />
             )
