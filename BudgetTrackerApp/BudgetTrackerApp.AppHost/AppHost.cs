@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Add PostgreSQL with data volume for persistence
@@ -17,9 +19,14 @@ builder.AddProject<Projects.BudgetTrackerApp_Web>("webfrontend")
     .WithReference(apiService)
     .WaitFor(apiService);
 
-builder.AddViteApp("react-frontend", "../frontend")
-    .WithReference(apiService)
-    .WaitFor(apiService)
-    .WithNpm();
+var startReactFrontend = builder.Configuration.GetValue("AppHost:StartReactFrontend", true);
+
+if (startReactFrontend)
+{
+    builder.AddViteApp("react-frontend", "../frontend")
+        .WithReference(apiService)
+        .WaitFor(apiService)
+        .WithNpm();
+}
 
 builder.Build().Run();
