@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import './UserInfo.css';
 
 function UserInfo() {
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
+    if (!user) {
       navigate('/login');
-    } else {
-      setUser(currentUser);
     }
-  }, [navigate]);
+  }, [navigate, user]);
 
   const handleLogout = async () => {
     await authService.logout();
