@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import accountService from '../services/accountService';
 import importService from '../services/importService';
 import './Import.css';
 
 function Import() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
@@ -16,6 +17,10 @@ function Import() {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountNumber, setNewAccountNumber] = useState('');
   const fileInputRef = useRef(null);
+  const preselectedAccountIdRef = useRef(
+    location.state?.preselectedAccountId?.toString() || ''
+  );
+  const cameFromDashboard = location.state?.from === 'dashboard';
 
   useEffect(() => {
     loadAccounts();
@@ -25,6 +30,26 @@ function Import() {
     try {
       const accountsData = await accountService.getAccounts();
       setAccounts(accountsData);
+      setSelectedAccountId((currentSelectedAccountId) => {
+        const hasCurrentSelection = accountsData.some(
+          (account) => account.id.toString() === currentSelectedAccountId
+        );
+
+        if (hasCurrentSelection) {
+          return currentSelectedAccountId;
+        }
+
+        const preferredAccountId = preselectedAccountIdRef.current;
+        const hasPreferredSelection = accountsData.some(
+          (account) => account.id.toString() === preferredAccountId
+        );
+
+        if (hasPreferredSelection) {
+          return preferredAccountId;
+        }
+
+        return '';
+      });
     } catch (error) {
       console.error('Error loading accounts:', error);
       setMessage({
@@ -37,6 +62,10 @@ function Import() {
   const handleLogout = async () => {
     await authService.logout();
     navigate('/login');
+  };
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
   };
 
   const handleFileChange = (e) => {
@@ -155,13 +184,34 @@ function Import() {
     }
   };
 
+  const selectedAccount = accounts.find(
+    (account) => account.id.toString() === selectedAccountId
+  );
+
   return (
     <div className="import-container">
       <div className="import-header">
-        <h1>Import Transactions</h1>
-        <button onClick={handleLogout} className="logout-button">
-          Logout
-        </button>
+        <div>
+          <h1>Import Transactions</h1>
+          {cameFromDashboard && (
+            <p className="import-flow-copy">
+              Bring new ledger activity into {selectedAccount?.name || 'your selected account'} and
+              return to the dashboard when you are done.
+            </p>
+          )}
+        </div>
+        <div className="import-header-actions">
+          <button
+            type="button"
+            onClick={handleBackToDashboard}
+            className="button button-secondary import-header-button"
+          >
+            Back to Dashboard
+          </button>
+          <button onClick={handleLogout} className="logout-button">
+            Logout
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -183,6 +233,17 @@ function Import() {
                 <li key={index}>{warning}</li>
               ))}
             </ul>
+          )}
+          {message.type === 'success' && (
+            <div className="import-success-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handleBackToDashboard}
+              >
+                Return to dashboard
+              </button>
+            </div>
           )}
         </div>
       )}

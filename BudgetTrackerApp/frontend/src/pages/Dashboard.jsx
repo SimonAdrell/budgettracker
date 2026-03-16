@@ -135,6 +135,15 @@ function Dashboard() {
     setDashboardReloadKey((currentValue) => currentValue + 1);
   };
 
+  const openImportPage = () => {
+    navigate('/import', {
+      state: {
+        from: 'dashboard',
+        preselectedAccountId: selectedAccountId || undefined,
+      },
+    });
+  };
+
   const selectedAccount = accounts.find(
     (account) => account.id.toString() === selectedAccountId
   );
@@ -301,6 +310,15 @@ function Dashboard() {
           Review one account at a time with a clear balance summary based on the
           latest imported ledger activity.
         </p>
+        <div className="dashboard-shell-actions">
+          <button
+            type="button"
+            className="dashboard-empty-state-action"
+            onClick={openImportPage}
+          >
+            Import transactions
+          </button>
+        </div>
       </header>
 
       <main className="dashboard-shell-grid">
@@ -317,7 +335,7 @@ function Dashboard() {
             <button
               type="button"
               className="dashboard-empty-state-action"
-              onClick={() => navigate('/import')}
+              onClick={openImportPage}
             >
               Create account or import
             </button>
@@ -449,7 +467,7 @@ function Dashboard() {
             <button
               type="button"
               className="dashboard-empty-state-action"
-              onClick={() => navigate('/import')}
+              onClick={openImportPage}
             >
               Import transactions
             </button>
