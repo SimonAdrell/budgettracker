@@ -369,7 +369,7 @@ The first dashboard version should:
 
 ---
 
-### [ ] Task 15 — Final smoke-test pass
+### [x] Task 15 — Final smoke-test pass
 **Status:** Sequential  
 **Depends on:** 1–14  
 **Goal:** Catch regressions before expanding scope.  
