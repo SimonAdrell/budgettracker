@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import UserInfo from './pages/UserInfo';
 import Import from './pages/Import';
+import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import authService from './services/authService';
 import './App.css';
@@ -18,6 +19,16 @@ function App() {
           element={
             authService.isAuthenticated() ? (
               <UserInfo />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            authService.isAuthenticated() ? (
+              <Dashboard />
             ) : (
               <Navigate to="/login" replace />
             )
