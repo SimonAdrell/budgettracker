@@ -1,6 +1,54 @@
+import { useEffect, useState } from 'react';
+import accountService from '../services/accountService';
 import './Dashboard.css';
 
 function Dashboard() {
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [accountsError, setAccountsError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAccounts = async () => {
+      try {
+        const accountsData = await accountService.getAccounts();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAccounts(accountsData);
+        setSelectedAccountId(accountsData[0]?.id.toString() || '');
+        setAccountsError('');
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error('Error loading dashboard accounts:', error);
+        setAccounts([]);
+        setSelectedAccountId('');
+        setAccountsError('Failed to load accounts for the dashboard.');
+      } finally {
+        if (isMounted) {
+          setLoadingAccounts(false);
+        }
+      }
+    };
+
+    loadAccounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedAccount = accounts.find(
+    (account) => account.id.toString() === selectedAccountId
+  );
+
   return (
     <div className="dashboard-shell">
       <header className="dashboard-panel dashboard-shell-header">
@@ -17,9 +65,46 @@ function Dashboard() {
           <p className="dashboard-section-label">Account selector area</p>
           <h2 id="dashboard-account-selector-heading">Selected account</h2>
           <p className="dashboard-section-copy">
-            Account loading and selection will be added in a later task.
+            Choose which account this dashboard will use once dashboard data wiring is added.
           </p>
-          <div className="dashboard-placeholder">Account selector placeholder</div>
+
+          {loadingAccounts && (
+            <div className="dashboard-placeholder">Loading accounts...</div>
+          )}
+
+          {!loadingAccounts && accountsError && (
+            <div className="dashboard-placeholder">{accountsError}</div>
+          )}
+
+          {!loadingAccounts && !accountsError && accounts.length === 0 && (
+            <div className="dashboard-placeholder">
+              No accounts are available yet. Import transactions or create an account to begin.
+            </div>
+          )}
+
+          {!loadingAccounts && !accountsError && accounts.length > 0 && (
+            <div className="dashboard-placeholder">
+              <div className="dashboard-form-group">
+                <label htmlFor="dashboard-account-select">Dashboard account</label>
+                <select
+                  id="dashboard-account-select"
+                  value={selectedAccountId}
+                  onChange={(event) => setSelectedAccountId(event.target.value)}
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} {account.accountNumber ? `(${account.accountNumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedAccount && (
+                <p className="dashboard-section-copy dashboard-selected-account-copy">
+                  {selectedAccount.name} is currently selected for this dashboard view.
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="dashboard-panel" aria-labelledby="dashboard-ledger-hero-heading">

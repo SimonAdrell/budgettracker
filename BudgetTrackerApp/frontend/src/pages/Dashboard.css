@@ -66,6 +66,34 @@
   font-weight: 500;
 }
 
+.dashboard-form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.dashboard-form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #1f2933;
+}
+
+.dashboard-form-group select:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.dashboard-selected-account-copy {
+  margin-bottom: 0;
+}
+
 .dashboard-placeholder-hero {
   min-height: 140px;
   display: flex;
