@@ -4,9 +4,6 @@ import dashboardService from '../services/dashboardService';
 import './Dashboard.css';
 
 const balanceFormatter = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'XXX',
-  currencyDisplay: 'symbol',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -118,6 +115,22 @@ function Dashboard() {
   );
   const dashboardAccountName = dashboardData?.accountName || selectedAccount?.name || 'selected account';
   const hasDashboardData = selectedAccountId && !loadingDashboard && !dashboardError && dashboardData;
+  const recentTransactions = dashboardData?.recentTransactions?.slice(0, 8) || [];
+  const showRunningBalance = recentTransactions.some((transaction) => transaction.balance != null);
+
+  const formatDateValue = (dateValue) => {
+    if (!dateValue) {
+      return '';
+    }
+
+    const [year, month, day] = dateValue.split('-').map(Number);
+
+    if (!year || !month || !day) {
+      return '';
+    }
+
+    return dateFormatter.format(new Date(year, month - 1, day));
+  };
 
   const formatBalance = (amount) => {
     if (amount == null) {
@@ -128,17 +141,13 @@ function Dashboard() {
   };
 
   const formatLastUpdated = (dateValue) => {
-    if (!dateValue) {
+    const formattedDate = formatDateValue(dateValue);
+
+    if (!formattedDate) {
       return 'Last updated unavailable';
     }
 
-    const [year, month, day] = dateValue.split('-').map(Number);
-
-    if (!year || !month || !day) {
-      return 'Last updated unavailable';
-    }
-
-    return `Last updated ${dateFormatter.format(new Date(year, month - 1, day))}`;
+    return `Last updated ${formattedDate}`;
   };
 
   const formatTransactionCount = (count) => {
@@ -159,6 +168,22 @@ function Dashboard() {
     }
 
     return 'dashboard-ledger-hero-balance-neutral';
+  };
+
+  const formatTransactionDate = (dateValue) => {
+    return formatDateValue(dateValue) || 'Date unavailable';
+  };
+
+  const getTransactionAmountClassName = (amount) => {
+    if (amount < 0) {
+      return 'dashboard-transaction-amount-negative';
+    }
+
+    if (amount > 0) {
+      return 'dashboard-transaction-amount-positive';
+    }
+
+    return 'dashboard-transaction-amount-neutral';
   };
 
   return (
@@ -277,8 +302,7 @@ function Dashboard() {
           <p className="dashboard-section-label">Recent activity area</p>
           <h2 id="dashboard-recent-activity-heading">Recent transactions</h2>
           <p className="dashboard-section-copy">
-            A compact preview list will render from page-local dashboard state in
-            the next task.
+            A quick preview of the latest imported transactions for the selected account.
           </p>
           {!selectedAccountId && (
             <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
@@ -299,12 +323,39 @@ function Dashboard() {
           )}
 
           {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
-            <ul className="dashboard-placeholder-list" aria-label="Recent activity placeholder list">
-              <li>
-                {dashboardData.recentTransactions.length} recent transaction item(s)
-                are ready for {dashboardData.accountName}.
-              </li>
-            </ul>
+            <>
+              {recentTransactions.length === 0 ? (
+                <div className="dashboard-placeholder dashboard-placeholder-compact">
+                  No recent transactions are available for {dashboardData.accountName} yet.
+                </div>
+              ) : (
+                <ul className="dashboard-recent-transactions-list" aria-label="Recent transactions preview">
+                  {recentTransactions.map((transaction, index) => (
+                    <li
+                      key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
+                      className="dashboard-transaction-preview"
+                    >
+                      <div className="dashboard-transaction-preview-main">
+                        <p className="dashboard-transaction-date">
+                          {formatTransactionDate(transaction.date)}
+                        </p>
+                        <p className="dashboard-transaction-description">{transaction.description}</p>
+                      </div>
+                      <div className="dashboard-transaction-preview-amounts">
+                        <p className={`dashboard-transaction-amount ${getTransactionAmountClassName(transaction.amount)}`}>
+                          {formatBalance(transaction.amount)}
+                        </p>
+                        {showRunningBalance && transaction.balance != null && (
+                          <p className="dashboard-transaction-balance">
+                            Balance {formatBalance(transaction.balance)}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </section>
       </main>
