@@ -167,17 +167,17 @@ function Dashboard() {
         <p className="dashboard-shell-kicker">Dashboard v1</p>
         <h1>Account dashboard</h1>
         <p className="dashboard-shell-copy">
-          This placeholder shell reserves the structure for the protected dashboard
-          experience without changing the current redirect or data-loading flow.
+          Review one account at a time with a clear balance summary based on the
+          latest imported ledger activity.
         </p>
       </header>
 
       <main className="dashboard-shell-grid">
         <section className="dashboard-panel" aria-labelledby="dashboard-account-selector-heading">
-          <p className="dashboard-section-label">Account selector area</p>
-          <h2 id="dashboard-account-selector-heading">Selected account</h2>
+          <p className="dashboard-section-label">Account focus</p>
+          <h2 id="dashboard-account-selector-heading">Source account</h2>
           <p className="dashboard-section-copy">
-            Choose which account this dashboard will use once dashboard data wiring is added.
+            Choose the account whose imported ledger should drive the balance summary.
           </p>
 
           {loadingAccounts && (
@@ -195,9 +195,9 @@ function Dashboard() {
           )}
 
           {!loadingAccounts && !accountsError && accounts.length > 0 && (
-            <div className="dashboard-placeholder">
+            <div className="dashboard-account-card">
               <div className="dashboard-form-group">
-                <label htmlFor="dashboard-account-select">Dashboard account</label>
+                <label htmlFor="dashboard-account-select">Reporting account</label>
                 <select
                   id="dashboard-account-select"
                   value={selectedAccountId}
@@ -211,19 +211,26 @@ function Dashboard() {
                 </select>
               </div>
               {selectedAccount && (
-                <p className="dashboard-section-copy dashboard-selected-account-copy">
-                  {selectedAccount.name} is currently selected for this dashboard view.
-                </p>
+                <div className="dashboard-account-card-foot">
+                  <p className="dashboard-account-card-note">
+                    Balance and activity below reflect {selectedAccount.name}.
+                  </p>
+                  {selectedAccount.accountNumber && (
+                    <p className="dashboard-account-card-detail">
+                      Account number ending in {selectedAccount.accountNumber.slice(-4)}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
         </section>
 
         <section className="dashboard-panel" aria-labelledby="dashboard-ledger-hero-heading">
-          <p className="dashboard-section-label">Ledger hero area</p>
+          <p className="dashboard-section-label">Ledger summary</p>
           <h2 id="dashboard-ledger-hero-heading">Balance summary</h2>
           <p className="dashboard-section-copy">
-            A quiet summary keeps the latest balance in focus for the selected account.
+            The figure below is the latest recorded balance for the selected account.
           </p>
           {!selectedAccountId && (
             <div className="dashboard-placeholder dashboard-placeholder-hero">
