@@ -143,10 +143,10 @@ function Dashboard() {
 
   const formatTransactionCount = (count) => {
     if (count === 1) {
-      return '1 transaction recorded';
+      return 'Based on 1 recorded transaction';
     }
 
-    return `${count ?? 0} transactions recorded`;
+    return `Based on ${count ?? 0} recorded transactions`;
   };
 
   const getBalanceClassName = (amount) => {
@@ -245,18 +245,23 @@ function Dashboard() {
 
           {hasDashboardData && (
             <div className="dashboard-ledger-hero" aria-live="polite">
-              <p className="dashboard-ledger-hero-account">{dashboardData.accountName}</p>
+              <div className="dashboard-ledger-hero-header">
+                <p className="dashboard-ledger-hero-label">Current balance</p>
+                <p className="dashboard-ledger-hero-account">{dashboardData.accountName}</p>
+              </div>
               <p className={`dashboard-ledger-hero-balance ${getBalanceClassName(dashboardData.currentBalance)}`}>
                 {formatBalance(dashboardData.currentBalance)}
               </p>
-              <p className="dashboard-ledger-hero-updated">
-                {dashboardData.hasTransactions
-                  ? formatLastUpdated(dashboardData.lastUpdated)
-                  : 'No transactions yet'}
-              </p>
-              <p className="dashboard-ledger-hero-meta">
-                {formatTransactionCount(dashboardData.transactionCount)}
-              </p>
+              <div className="dashboard-ledger-hero-support">
+                <p className="dashboard-ledger-hero-updated">
+                  {dashboardData.hasTransactions
+                    ? formatLastUpdated(dashboardData.lastUpdated)
+                    : 'No transactions imported yet'}
+                </p>
+                <p className="dashboard-ledger-hero-meta">
+                  {formatTransactionCount(dashboardData.transactionCount)}
+                </p>
+              </div>
             </div>
           )}
         </section>
