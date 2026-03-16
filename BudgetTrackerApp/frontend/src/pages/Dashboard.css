@@ -101,6 +101,62 @@
   justify-content: center;
 }
 
+.dashboard-ledger-hero {
+  margin-top: 1.25rem;
+  padding: 1.5rem;
+  min-height: 140px;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+}
+
+.dashboard-ledger-hero-account,
+.dashboard-ledger-hero-updated,
+.dashboard-ledger-hero-meta {
+  margin: 0;
+}
+
+.dashboard-ledger-hero-account {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #486581;
+}
+
+.dashboard-ledger-hero-balance {
+  margin: 0.25rem 0 0;
+  font-size: clamp(3rem, 8vw, 4.75rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+  color: #102a43;
+}
+
+.dashboard-ledger-hero-balance-positive {
+  color: #0f766e;
+}
+
+.dashboard-ledger-hero-balance-negative {
+  color: #b42318;
+}
+
+.dashboard-ledger-hero-balance-neutral {
+  color: #102a43;
+}
+
+.dashboard-ledger-hero-updated {
+  font-size: 1rem;
+  color: #52606d;
+}
+
+.dashboard-ledger-hero-meta {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: #7b8794;
+}
+
 .dashboard-placeholder-list {
   margin-top: 1.25rem;
   padding-left: 1.25rem;
@@ -116,5 +172,13 @@
 
   .dashboard-panel {
     padding: 1.25rem;
+  }
+
+  .dashboard-ledger-hero {
+    padding: 1.25rem;
+  }
+
+  .dashboard-ledger-hero-balance {
+    font-size: clamp(2.5rem, 12vw, 3.5rem);
   }
 }

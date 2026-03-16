@@ -3,6 +3,20 @@ import accountService from '../services/accountService';
 import dashboardService from '../services/dashboardService';
 import './Dashboard.css';
 
+const balanceFormatter = new Intl.NumberFormat(undefined, {
+  style: 'currency',
+  currency: 'XXX',
+  currencyDisplay: 'symbol',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
 function Dashboard() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
@@ -103,6 +117,49 @@ function Dashboard() {
     (account) => account.id.toString() === selectedAccountId
   );
   const dashboardAccountName = dashboardData?.accountName || selectedAccount?.name || 'selected account';
+  const hasDashboardData = selectedAccountId && !loadingDashboard && !dashboardError && dashboardData;
+
+  const formatBalance = (amount) => {
+    if (amount == null) {
+      return balanceFormatter.format(0);
+    }
+
+    return balanceFormatter.format(amount);
+  };
+
+  const formatLastUpdated = (dateValue) => {
+    if (!dateValue) {
+      return 'Last updated unavailable';
+    }
+
+    const [year, month, day] = dateValue.split('-').map(Number);
+
+    if (!year || !month || !day) {
+      return 'Last updated unavailable';
+    }
+
+    return `Last updated ${dateFormatter.format(new Date(year, month - 1, day))}`;
+  };
+
+  const formatTransactionCount = (count) => {
+    if (count === 1) {
+      return '1 transaction recorded';
+    }
+
+    return `${count ?? 0} transactions recorded`;
+  };
+
+  const getBalanceClassName = (amount) => {
+    if (amount < 0) {
+      return 'dashboard-ledger-hero-balance-negative';
+    }
+
+    if (amount > 0) {
+      return 'dashboard-ledger-hero-balance-positive';
+    }
+
+    return 'dashboard-ledger-hero-balance-neutral';
+  };
 
   return (
     <div className="dashboard-shell">
@@ -166,8 +223,7 @@ function Dashboard() {
           <p className="dashboard-section-label">Ledger hero area</p>
           <h2 id="dashboard-ledger-hero-heading">Balance summary</h2>
           <p className="dashboard-section-copy">
-            The main balance, last updated timestamp, and transaction count will
-            render from page-local dashboard state in the next task.
+            A quiet summary keeps the latest balance in focus for the selected account.
           </p>
           {!selectedAccountId && (
             <div className="dashboard-placeholder dashboard-placeholder-hero">
@@ -187,10 +243,20 @@ function Dashboard() {
             </div>
           )}
 
-          {selectedAccountId && !loadingDashboard && !dashboardError && dashboardData && (
-            <div className="dashboard-placeholder dashboard-placeholder-hero">
-              Dashboard data loaded for {dashboardData.accountName}. Balance summary
-              fields are ready to render.
+          {hasDashboardData && (
+            <div className="dashboard-ledger-hero" aria-live="polite">
+              <p className="dashboard-ledger-hero-account">{dashboardData.accountName}</p>
+              <p className={`dashboard-ledger-hero-balance ${getBalanceClassName(dashboardData.currentBalance)}`}>
+                {formatBalance(dashboardData.currentBalance)}
+              </p>
+              <p className="dashboard-ledger-hero-updated">
+                {dashboardData.hasTransactions
+                  ? formatLastUpdated(dashboardData.lastUpdated)
+                  : 'No transactions yet'}
+              </p>
+              <p className="dashboard-ledger-hero-meta">
+                {formatTransactionCount(dashboardData.transactionCount)}
+              </p>
             </div>
           )}
         </section>
