@@ -59,6 +59,41 @@
   grid-column: 1 / -1;
 }
 
+.dashboard-empty-state-panel {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  border-color: #c7d2e0;
+  background: linear-gradient(180deg, #fcfdff 0%, #f3f7fb 100%);
+}
+
+.dashboard-empty-state-panel h2,
+.dashboard-empty-state-panel .dashboard-section-copy {
+  margin: 0;
+}
+
+.dashboard-empty-state-action {
+  justify-self: start;
+  padding: 0.85rem 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #102a43;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(16, 42, 67, 0.16);
+}
+
+.dashboard-empty-state-action:hover {
+  background: #0b1f33;
+}
+
+.dashboard-empty-state-action:focus-visible {
+  outline: 3px solid rgba(72, 101, 129, 0.28);
+  outline-offset: 3px;
+}
+
 .dashboard-placeholder {
   margin-top: 1.25rem;
   padding: 1rem;
