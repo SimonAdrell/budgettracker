@@ -69,6 +69,10 @@
   font-weight: 500;
 }
 
+.dashboard-placeholder-compact {
+  min-height: 0;
+}
+
 .dashboard-form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -233,6 +237,89 @@
   gap: 0.75rem;
 }
 
+.dashboard-recent-transactions-list {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dashboard-transaction-preview {
+  padding: 0.95rem 1rem;
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f7fafc 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-transaction-preview-main,
+.dashboard-transaction-preview-amounts {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.dashboard-transaction-preview-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-transaction-preview-amounts {
+  justify-items: end;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dashboard-transaction-date,
+.dashboard-transaction-description,
+.dashboard-transaction-amount,
+.dashboard-transaction-balance {
+  margin: 0;
+}
+
+.dashboard-transaction-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #486581;
+}
+
+.dashboard-transaction-description {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #102a43;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-transaction-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: #102a43;
+}
+
+.dashboard-transaction-amount-positive {
+  color: #0f766e;
+}
+
+.dashboard-transaction-amount-negative {
+  color: #b42318;
+}
+
+.dashboard-transaction-amount-neutral {
+  color: #102a43;
+}
+
+.dashboard-transaction-balance {
+  font-size: 0.88rem;
+  color: #7b8794;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 @media (max-width: 640px) {
   .dashboard-shell {
     padding: 1.5rem 1rem 2rem;
@@ -256,5 +343,16 @@
 
   .dashboard-ledger-hero-balance {
     font-size: clamp(2.25rem, 10vw, 3.25rem);
+  }
+
+  .dashboard-transaction-preview {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .dashboard-transaction-preview-amounts {
+    width: 100%;
+    justify-items: start;
+    text-align: left;
   }
 }
