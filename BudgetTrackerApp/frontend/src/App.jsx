@@ -12,7 +12,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={
+            authService.isAuthenticated() ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Login />
+            )
+          }
+        />
         <Route path="/register" element={<Register />} />
         <Route
           path="/user-info"
