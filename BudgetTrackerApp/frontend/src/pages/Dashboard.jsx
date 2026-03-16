@@ -84,23 +84,22 @@ function Dashboard() {
 
           {!loadingAccounts && !accountsError && accounts.length > 0 && (
             <div className="dashboard-placeholder">
-              <label htmlFor="dashboard-account-select" className="dashboard-section-label">
-                Dashboard account
-              </label>
-              <select
-                id="dashboard-account-select"
-                value={selectedAccountId}
-                onChange={(event) => setSelectedAccountId(event.target.value)}
-                style={{ display: 'block', width: '100%', marginTop: '0.75rem' }}
-              >
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name} {account.accountNumber ? `(${account.accountNumber})` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="dashboard-form-group">
+                <label htmlFor="dashboard-account-select">Dashboard account</label>
+                <select
+                  id="dashboard-account-select"
+                  value={selectedAccountId}
+                  onChange={(event) => setSelectedAccountId(event.target.value)}
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} {account.accountNumber ? `(${account.accountNumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {selectedAccount && (
-                <p className="dashboard-section-copy">
+                <p className="dashboard-section-copy dashboard-selected-account-copy">
                   {selectedAccount.name} is currently selected for this dashboard view.
                 </p>
               )}
