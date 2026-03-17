@@ -335,7 +335,9 @@ public class IdentityTests
             ConfirmPassword = testPassword
         };
 
-        await httpClient.PostAsJsonAsync("/api/auth/register", registerRequest, cancellationToken);
+        var registerResponse = await httpClient.PostAsJsonAsync("/api/auth/register", registerRequest, cancellationToken);
+        var registerResponseBody = await registerResponse.Content.ReadAsStringAsync();
+        Assert.True(registerResponse.IsSuccessStatusCode, registerResponseBody);
 
         var loginRequest = new LoginRequest
         {
@@ -344,6 +346,7 @@ public class IdentityTests
         };
 
         var loginResponse = await httpClient.PostAsJsonAsync("/api/auth/login", loginRequest, cancellationToken);
+        Assert.True(loginResponse.IsSuccessStatusCode, $"Login failed: {await loginResponse.Content.ReadAsStringAsync(cancellationToken)}");
         var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
         Assert.NotNull(authResponse);
 

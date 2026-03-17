@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace BudgetTrackerApp.ApiService.Controllers
 {
@@ -72,7 +73,16 @@ namespace BudgetTrackerApp.ApiService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Refresh(RefreshTokenRequest request)
         {
-            var principal = tokenService.GetPrincipalFromExpiredToken(request.Token);
+            ClaimsPrincipal principal;
+            try
+            {
+                principal = tokenService.GetPrincipalFromExpiredToken(request.Token);
+            }
+            catch (SecurityTokenException)
+            {
+                return Unauthorized();
+            }
+
             if (principal == null)
             {
                 return Unauthorized();
