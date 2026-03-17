@@ -489,7 +489,7 @@ This first queue is intentionally definition-first. It should document product r
 
 ---
 
-### [ ] Task T2 - Transfer data-model proposal
+### [x] Task T2 - Transfer data-model proposal
 **Status:** Sequential  
 **Depends on:** T1  
 **Goal:** Define the proposed persistence shape for verified transfer links.  
