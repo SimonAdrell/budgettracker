@@ -78,3 +78,19 @@ Require manual review for:
 - dashboard data correctness
 - stale data when switching accounts
 - any auth changes
+
+## Transfer Verification Phase Guidance
+
+The next phase is focused on defining and implementing transfer verification one step at a time.
+
+- transfer verification must be user-approved in v1
+- verified transfers must be visibly marked in the UI
+- raw transactions must remain unchanged as source records
+- prefer a separate transfer-link concept over changing transaction meaning directly
+- do not implement multi-account totals yet in this phase
+- avoid over-automation in candidate matching
+
+For v1 transfer work:
+- keep scope on candidate rules, verification, unverify behavior, transfer visibility, and transfer-link storage
+- do not add auto-confirmation, advanced confidence logic, or broad matching workflows
+- keep product behavior practical and reviewable from the existing React app

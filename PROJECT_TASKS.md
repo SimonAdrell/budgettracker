@@ -438,3 +438,150 @@ Why:
 - locks the response shape early
 - reduces ambiguity for both backend and frontend
 - enables the backend and frontend dashboard work to proceed without guessing
+
+## Next Planned Phase — Transfer Verification v1
+
+### Summary
+
+This is the next planned phase after the current dashboard work.
+
+Transfer Verification v1 should define how the product:
+- suggests possible internal transfer matches between accounts
+- lets the user confirm or undo a transfer link
+- keeps verified transfers visible in the UI and in each account ledger
+- prepares future combined-account views to treat verified transfers as internal movement instead of external income or expense
+
+This first queue is intentionally definition-first. It should document product rules, data-model direction, initial matching heuristics, and UI behavior before implementation tasks expand.
+
+### Summary Table
+
+| # | Task | Status | Depends On | Main Files |
+|---|---|---|---|---|
+| T1 | Transfer definition and rules doc | Sequential | None | `docs/transfer-verification-v1.md`, repo planning docs |
+| T2 | Transfer data-model proposal | Sequential | T1 | `docs/transfer-verification-v1.md`, `ARCHITECTURE.md` |
+| T3 | Transfer candidate heuristics spec | Sequential | T1, T2 | `docs/transfer-verification-v1.md` |
+| T4 | UI behavior spec for transfer visibility | Sequential | T1, T3 | `docs/transfer-verification-v1.md` |
+| T5 | First implementation planning pass | Sequential | T1-T4 | `PROJECT_TASKS.md`, optionally `docs/transfer-verification-v1.md` |
+
+### Numbered Checklist
+
+### [ ] Task T1 - Transfer definition and rules doc
+**Status:** Sequential  
+**Depends on:** None  
+**Goal:** Write down the product rules for what a transfer is, what a candidate is, what verification means, and what changes after verification.  
+**Why it matters:** Prevents implementation drift before code changes begin.  
+**Likely files:**
+- `docs/transfer-verification-v1.md`
+- optionally cross-links from `PROJECT_STATUS.md`, `PROJECT_TASKS.md`, `ARCHITECTURE.md`, and `AGENT_GUIDE.md`
+
+**Implementation instructions:**
+- Document:
+  - verified transfer definition
+  - candidate definition
+  - UI visibility requirement
+  - unverify behavior
+  - what remains unchanged in the ledger
+  - what future combined views should do differently
+- Keep the wording implementation-ready and avoid adding product behavior beyond the agreed v1 scope.
+
+**Success criteria:**
+- Transfer rules are documented clearly enough to implement from without guessing.
+
+---
+
+### [ ] Task T2 - Transfer data-model proposal
+**Status:** Sequential  
+**Depends on:** T1  
+**Goal:** Define the proposed persistence shape for verified transfer links.  
+**Why it matters:** Raw transactions should stay intact, and the relationship needs its own model.  
+**Likely files:**
+- `docs/transfer-verification-v1.md`
+- optionally `ARCHITECTURE.md`
+
+**Implementation instructions:**
+- Propose a separate link entity such as `TransactionTransferLink` or equivalent.
+- Document likely fields such as:
+  - `id`
+  - `fromTransactionId`
+  - `toTransactionId`
+  - `status`
+  - `createdAt`
+  - `verifiedAt`
+  - `verifiedByUserId`
+- Document basic invariants:
+  - linked transactions must be in different accounts
+  - linked transactions must have opposite signs
+  - one active verified link per transaction
+
+**Success criteria:**
+- Model proposal is specific enough to guide implementation tasks.
+
+---
+
+### [ ] Task T3 - Transfer candidate heuristics spec
+**Status:** Sequential  
+**Depends on:** T1, T2  
+**Goal:** Define the initial matching rules for possible transfer candidates.  
+**Why it matters:** The app needs a predictable and reviewable way to suggest transfer matches.  
+**Likely files:**
+- `docs/transfer-verification-v1.md`
+
+**Implementation instructions:**
+- Define simple v1 heuristics:
+  - different accounts
+  - opposite signs
+  - same amount
+  - close date proximity
+  - not already linked
+  - not already part of another active candidate pair
+- Explicitly avoid over-complicated matching in v1.
+
+**Success criteria:**
+- Heuristics are documented in a way that can be directly implemented and tested.
+
+---
+
+### [ ] Task T4 - UI behavior spec for transfer visibility
+**Status:** Sequential  
+**Depends on:** T1, T3  
+**Goal:** Define how candidate and verified transfers appear in the UI.  
+**Why it matters:** Visibility in the UI is a core product requirement.  
+**Likely files:**
+- `docs/transfer-verification-v1.md`
+
+**Implementation instructions:**
+- Specify:
+  - verified transfer badge or label
+  - candidate badge or label
+  - confirm action
+  - review linked counterpart transaction
+  - undo or unverify action
+  - minimal copy guidance
+- Keep the UI practical for the existing React product.
+
+**Success criteria:**
+- UI requirements are clear enough to build without inventing new product behavior.
+
+---
+
+### [ ] Task T5 - First implementation planning pass
+**Status:** Sequential  
+**Depends on:** T1-T4  
+**Goal:** Convert the documented transfer rules into the first implementation-ready coding-agent tasks.  
+**Why it matters:** Turns the definition phase into actionable next steps.  
+**Likely files:**
+- `PROJECT_TASKS.md`
+- optionally `docs/transfer-verification-v1.md`
+
+**Implementation instructions:**
+- Add a short follow-on note describing the likely first implementation tasks after the definition phase:
+  - persistence/model task
+  - migration task
+  - backend candidate query task
+  - verify/unverify endpoint task
+  - transaction DTO/status task
+  - frontend badge/review action task
+- Do not fully expand these implementation tasks yet. Just frame the likely next phase.
+
+**Success criteria:**
+- The repo has a clear path from product definition to implementation planning.

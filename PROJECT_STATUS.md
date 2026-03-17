@@ -42,6 +42,21 @@ The safest dashboard MVP for the current repo is:
 - no multi-account aggregated dashboard yet
 - no advanced analytics yet
 
+## Upcoming Phase — Transfer Verification v1
+
+The next planned product phase is Transfer Verification v1.
+
+Goal:
+- let the user confirm when two transactions from different accounts are the same internal movement of money
+- show verified transfers clearly in the UI
+- keep the product ready for future combined-account views that should not double-count internal movement
+
+This phase matters before multi-account totals because combined views will be misleading if internal transfers are still treated like new income or new expense. Transfer verification creates the product rules needed to distinguish account-to-account movement from real portfolio inflow or outflow.
+
+Verified transfers must remain visible in the UI after confirmation. They should also remain visible in each account ledger and continue to participate in each account's balance history so account-level continuity stays intact.
+
+Future combined views should treat verified transfers as internal movement rather than external income or expense. That behavior depends on transfer verification being defined clearly first.
+
 ## Key Constraints
 
 - `BudgetTrackerApp/frontend` remains the primary product UI
