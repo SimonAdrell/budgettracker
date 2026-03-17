@@ -397,7 +397,7 @@ Do not refactor during this step.
 
 ---
 
-### [ ] Task 16 — Move remaining minimal APIs to controllers
+### [x] Task 16 — Move remaining minimal APIs to controllers
 **Status:** Sequential after 15  
 **Depends on:** 15  
 **Goal:** Move application endpoints out of `Program.cs` and into controllers.  

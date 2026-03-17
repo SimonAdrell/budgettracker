@@ -301,4 +301,65 @@ public class IdentityTests
         Assert.NotEqual(authResponse.Token, newAuthResponse.Token);
         Assert.NotEqual(authResponse.RefreshToken, newAuthResponse.RefreshToken);
     }
+
+    [Fact]
+    public async Task LogoutRevokesRefreshTokens()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.BudgetTrackerApp_AppHost>(cancellationToken);
+        appHost.Services.AddLogging(logging =>
+        {
+            logging.SetMinimumLevel(LogLevel.Debug);
+            logging.AddFilter(appHost.Environment.ApplicationName, LogLevel.Debug);
+            logging.AddFilter("Aspire.", LogLevel.Debug);
+        });
+        appHost.Services.ConfigureHttpClientDefaults(clientBuilder =>
+        {
+            clientBuilder.AddStandardResilienceHandler();
+        });
+
+        await using var app = await appHost.BuildAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+        await app.StartAsync(cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+
+        var httpClient = app.CreateHttpClient("apiservice");
+        await app.ResourceNotifications.WaitForResourceHealthyAsync("apiservice", cancellationToken).WaitAsync(DefaultTimeout, cancellationToken);
+
+        var testEmail = $"test_{Guid.NewGuid()}@example.com";
+        var testPassword = "Test123!";
+
+        var registerRequest = new RegisterRequest
+        {
+            Email = testEmail,
+            Password = testPassword,
+            ConfirmPassword = testPassword
+        };
+
+        await httpClient.PostAsJsonAsync("/api/auth/register", registerRequest, cancellationToken);
+
+        var loginRequest = new LoginRequest
+        {
+            Email = testEmail,
+            Password = testPassword
+        };
+
+        var loginResponse = await httpClient.PostAsJsonAsync("/api/auth/login", loginRequest, cancellationToken);
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken);
+        Assert.NotNull(authResponse);
+
+        httpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+        var logoutResponse = await httpClient.PostAsJsonAsync("/api/auth/logout", new { }, cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
+
+        var refreshRequest = new RefreshTokenRequest
+        {
+            Token = authResponse.Token,
+            RefreshToken = authResponse.RefreshToken
+        };
+
+        var refreshResponse = await httpClient.PostAsJsonAsync("/api/auth/refresh", refreshRequest, cancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, refreshResponse.StatusCode);
+    }
 }
