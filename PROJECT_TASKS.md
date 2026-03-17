@@ -465,7 +465,7 @@ This first queue is intentionally definition-first. It should document product r
 
 ### Numbered Checklist
 
-### [ ] Task T1 - Transfer definition and rules doc
+### [x] Task T1 - Transfer definition and rules doc
 **Status:** Sequential  
 **Depends on:** None  
 **Goal:** Write down the product rules for what a transfer is, what a candidate is, what verification means, and what changes after verification.  
