@@ -110,6 +110,65 @@ When the user unverifies a transfer in v1:
 
 Unverify does not introduce a compensating transaction, a deletion, or a balance correction. It only removes the verified-link meaning.
 
+## Proposed Persistence Model
+
+### Persisted entity
+
+For v1, verified transfer storage should use a separate link entity such as `TransactionTransferLink`.
+
+The link entity should be the persisted record of user-approved transfer verification. Raw `Transaction` rows remain the source records for account, amount, date, balance, description, and import history.
+
+This means v1 should persist the verified relationship, not a rewritten transaction. It should also avoid introducing a transfer boolean or transfer-type rewrite directly on the raw transaction rows.
+
+Candidate detection does not need its own persisted row in T2. Until a later task says otherwise, candidates can remain a derived review state while verified links are the only transfer-specific records stored in the database.
+
+### Proposed fields
+
+The proposed persisted shape for a verified transfer link is:
+
+- `id`: primary key for the link record
+- `fromTransactionId`: foreign key to the outflow side of the verified transfer
+- `toTransactionId`: foreign key to the inflow side of the verified transfer
+- `status`: persisted link state so active verified meaning can be distinguished from a no-longer-active link
+- `createdAt`: timestamp for when the link row was first created
+- `verifiedAt`: timestamp for when the user confirmed the link as a verified transfer
+- `verifiedByUserId`: user identifier for the user who performed verification
+
+Field intent in v1:
+
+- `fromTransactionId` should reference the negative-amount transaction
+- `toTransactionId` should reference the positive-amount transaction
+- the link row should reference existing raw transactions rather than copying amount, balance, description, or import fields onto the link itself
+- `status` should be treated as link state, not as a replacement for raw transaction meaning
+
+This proposal intentionally keeps the link narrow. The linked transactions already carry the account IDs, dates, amounts, descriptions, and imported balances that remain authoritative in v1.
+
+### Core invariants
+
+The persistence model should preserve these invariants:
+
+- `fromTransactionId` and `toTransactionId` must reference two different transaction rows
+- the linked transactions must belong to different accounts
+- the linked transactions must have opposite signs
+- a verified link applies to exactly two transactions in v1
+- one transaction may participate in at most one active verified link at a time
+- verification state must live on the link record, not by mutating or replacing the raw transaction records
+
+These invariants match the T1 product rules:
+
+- single-account ledgers stay unchanged and truthful
+- raw transactions stay intact as source records
+- verified transfer meaning is explicit, reviewable, and reversible
+
+### Lifecycle direction
+
+The model should support the user-approved lifecycle already defined in this document:
+
+- verify creates or activates a transfer-link record for the selected pair
+- unverify removes active verified meaning from the link record without changing the underlying transactions
+
+This document does not lock the final enum names or database migration approach. It does, however, require the persisted model to distinguish an active verified link from a link that is no longer active, because unverify is part of the v1 product behavior.
+
 ## UI Visibility Requirements
 
 Transfer Verification v1 must be visible in the product UI. Verified transfers cannot become hidden bookkeeping state.

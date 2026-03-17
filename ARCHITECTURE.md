@@ -94,6 +94,12 @@ Raw imported transactions should remain the source of truth. Transfer behavior s
 
 For v1, a verified transfer is a user-confirmed link between two opposite-signed transactions in different accounts that represent the same internal movement of money.
 
+Recommended persisted shape for that relationship:
+- use a dedicated entity such as `TransactionTransferLink`
+- store transaction references plus verification metadata on the link
+- keep transfer state on the link instead of rewriting the raw `Transaction` rows
+- enforce different-account, opposite-sign, and one-active-link-per-transaction invariants
+
 Recommended architectural direction:
 - keep imported transaction rows unchanged as source records
 - add a separate transfer-link concept to represent verification
