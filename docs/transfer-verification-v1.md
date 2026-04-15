@@ -230,3 +230,53 @@ Transfer Verification v1 does not define or implement:
 - rewriting raw transaction data to make a transfer "fit"
 
 Follow-up tasks may define storage shape, matching heuristics, and concrete UI interactions, but they must stay within the product rules in this document.
+
+## Candidate Detection Heuristics
+
+This section defines the v1 rules for identifying transfer candidates. These heuristics are the basis for backend candidate queries and must be implementable as a direct database query without machine-learning or scoring.
+
+### v1 Matching Rules
+
+A pair of transactions qualifies as a transfer candidate in v1 when all of the following conditions are true:
+
+**1. Different accounts**
+The two transactions must belong to different accounts. Both accounts must be accessible to the requesting user. A transaction cannot be matched with another transaction in the same account.
+
+**2. Opposite signs**
+One transaction must have a negative amount (outflow) and the other must have a positive amount (inflow). Zero-amount transactions are excluded from candidate detection.
+
+**3. Same absolute amount**
+`abs(transaction_a.amount) == abs(transaction_b.amount)`
+
+v1 uses exact equality only. Fuzzy amount matching and tolerance ranges are not part of v1.
+
+**4. Date proximity**
+The booking dates of the two transactions must be within **5 calendar days** of each other (inclusive). This window is chosen to accommodate weekend processing delays and cross-bank settlement timing.
+
+```
+abs(transaction_a.booking_date - transaction_b.booking_date) <= 5 days
+```
+
+The 5-day default may be made configurable in a later task, but v1 implementations should treat it as a fixed constant.
+
+**5. Not already linked**
+Neither transaction may currently participate in an active verified transfer link. A transaction is excluded from candidate results if it appears as `fromTransactionId` or `toTransactionId` in any `TransactionTransferLink` record with an active status.
+
+### What These Rules Do Not Cover
+
+The v1 heuristics intentionally exclude:
+
+- Fuzzy or approximate amount matching
+- Confidence scoring or ranking
+- Description similarity matching
+- One-to-many or many-to-one matching
+- Currency conversion or cross-currency transfers
+- Partial transfer amounts
+
+These cases remain deferred to future phases.
+
+### Candidate State
+
+A candidate pair has no persisted row of its own. Candidates are derived at query time by applying the rules above. Only verified links are stored in the database.
+
+If a previously verified pair is unverified, and the original transactions still satisfy all heuristic rules, the pair may appear again as a candidate. This is expected behavior, not a special case.

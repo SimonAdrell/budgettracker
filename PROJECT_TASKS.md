@@ -518,7 +518,7 @@ This first queue is intentionally definition-first. It should document product r
 
 ---
 
-### [ ] Task T3 - Transfer candidate heuristics spec
+### [x] Task T3 - Transfer candidate heuristics spec
 **Status:** Sequential  
 **Depends on:** T1, T2  
 **Goal:** Define the initial matching rules for possible transfer candidates.  
